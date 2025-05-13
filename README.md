@@ -6,6 +6,8 @@
 
 A lightweight Rails helper for effortless Cloudflare Turnstile integration with Turbo support and CSP compliance.
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/vkononov)
+
 ## Features
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `verify_turnstile(model:)` in controllers — no extra wiring.
