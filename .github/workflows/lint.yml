@@ -1,0 +1,22 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Rubocop
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up latest Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 'ruby'
+          bundler-cache: true
+      - name: Run Rubocop
+        run: bin/lint --no-fix

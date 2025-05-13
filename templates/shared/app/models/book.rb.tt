@@ -1,0 +1,19 @@
+class Book
+  include ActiveModel::Model
+  include ActiveModel::Validations
+<% if Gem::Version.new(Rails.version) >= Gem::Version.new("6.0.0") -%>
+  include ActiveModel::Attributes
+
+  attribute :title, :string
+<% else -%>
+
+  attr_accessor :title
+
+  def initialize(attributes = {})
+    super
+    @title = attributes[:title]
+  end
+<% end -%>
+
+  validates :title, presence: true
+end

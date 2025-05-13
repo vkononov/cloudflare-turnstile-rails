@@ -1,0 +1,20 @@
+<%= form_for(book, remote: true, html: { id: turbo_form_id }) do |form| %>
+  <% if book.errors.any? %>
+    <ul>
+      <% book.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= hidden_field_tag :turbo_form_id, turbo_form_id %>
+
+  <p>
+    <%= form.label :title %>
+    <%= form.text_field :title %>
+  </p>
+
+  <%= cloudflare_turnstile_tag data: {theme: 'dark'} %>
+
+  <%= form.submit %>
+<% end %>

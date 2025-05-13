@@ -1,0 +1,42 @@
+class BooksController < ApplicationController
+  def new
+    @book = Book.new
+  end
+
+  def new2
+    @book1 = Book.new
+    @book2 = Book.new
+  end
+
+  def create
+    @book = Book.new(book_params)
+
+    respond_to do |format|
+      if verify_turnstile(model: @book) && @book.valid?
+        format.html { redirect_to new_book_url, notice: "Book was successfully created." }
+      else
+        format.html { render :new, status: :unprocessable_entity }
+        format.js
+<% if Gem::Version.new(Rails.version) >= Gem::Version.new("7.0.0") -%>
+        format.turbo_stream do
+          render turbo_stream: turbo_stream.replace(
+            params[:turbo_form_id],
+            partial: "books/form",
+            locals: { book: @book, turbo_form_id: params[:turbo_form_id] }
+          )
+        end
+<% end -%>
+      end
+    end
+  end
+
+  private
+
+  def book_params
+<% if Gem::Version.new(Rails.version) >= Gem::Version.new("8.0.0") -%>
+    params.expect(book: [:title])
+<% else -%>
+    params.require(:book).permit(:title)
+<% end -%>
+  end
+end

@@ -1,0 +1,15 @@
+(function() {
+    const oldForm = document.getElementById("<%= j params[:turbo_form_id] %>");
+    const newFormHTML = `<%= j render(partial: 'books/form', locals: { book: @book, turbo_form_id: params[:turbo_form_id] }) %>`;
+
+    const tempWrapper = document.createElement("div");
+    tempWrapper.innerHTML = newFormHTML;
+    const newForm = tempWrapper.firstElementChild;
+
+    oldForm.replaceWith(newForm);
+
+    const turnstileContainer = newForm.querySelector('.cf-turnstile');
+    if (typeof turnstile !== "undefined" && turnstileContainer && turnstileContainer.childElementCount === 0) {
+        turnstile.render(turnstileContainer);
+    }
+})();

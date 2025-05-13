@@ -1,0 +1,14 @@
+.DS_Store
+.idea
+
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+
+Gemfile.lock
+gemfiles
