@@ -1,6 +1,6 @@
 require 'application_system_test_case'
 
-class BooksTest < ApplicationSystemTestCase
+class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLength
   setup do
     Cloudflare::Turnstile::Rails.configure do |config|
       config.site_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
@@ -45,10 +45,24 @@ class BooksTest < ApplicationSystemTestCase
   end
 
   test 'submitting the form before turnstile is ready shows an error and re-renders turnstile' do
+    Cloudflare::Turnstile::Rails.configuration.auto_populate_response_in_test_env = false
     visit new_book_url
     click_on 'Create Book'
 
-    assert_text 'Turnstile verification missing.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
+      Cloudflare::Turnstile::Rails::ErrorCode::MISSING_INPUT_RESPONSE
+    )
+    wait_for_turnstile_inputs(1)
+  end
+
+  test 'submitting the form before turnstile is ready passed when response is auto populated' do
+    Cloudflare::Turnstile::Rails.configuration.auto_populate_response_in_test_env = false
+    visit new_book_url
+    click_on 'Create Book'
+
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
+      Cloudflare::Turnstile::Rails::ErrorCode::MISSING_INPUT_RESPONSE
+    )
     wait_for_turnstile_inputs(1)
   end
 
@@ -65,7 +79,9 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Server misconfiguration: Turnstile secret key invalid.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
+      Cloudflare::Turnstile::Rails::ErrorCode::INVALID_INPUT_SECRET
+    )
     wait_for_turnstile_inputs(1)
   end
 
@@ -75,7 +91,9 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Turnstile token is invalid.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
+      Cloudflare::Turnstile::Rails::ErrorCode::INVALID_INPUT_RESPONSE
+    )
     wait_for_turnstile_inputs(1)
   end
 

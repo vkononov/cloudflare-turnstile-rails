@@ -45,34 +45,36 @@ module Cloudflare
 
       module Verification
         def self.verify(response:, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-          raise ConfigurationError, 'Turnstile response token is missing' if response.nil? || response.strip.empty?
+          if response.nil? || response.strip.empty?
+            unless ::Rails.env.test? && Rails.configuration.auto_populate_response_in_test_env
+              raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_RESPONSE)
+            end
 
-          config = Rails.configuration
-          secret ||= config.secret_key
+            response = 'dummy-response'
 
-          raise ConfigurationError, 'Cloudflare Turnstile secret_key is not set.' if secret.nil? || secret.strip.empty?
+          end
 
-          body = {
-            'secret' => secret,
-            'response' => response
-          }
+          secret ||= Rails.configuration.secret_key
+          if secret.nil? || secret.strip.empty?
+            raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET)
+          end
+
+          body = { 'secret' => secret, 'response' => response }
           body['remoteip'] = remoteip if remoteip
           body['idempotency_key'] = idempotency_key if idempotency_key
 
           uri = URI.parse(Cloudflare::SITE_VERIFY_URL)
-          headers = { 'Content-Type' => 'application/x-www-form-urlencoded' }
-          http = Net::HTTP.new(uri.host, uri.port)
-          http.use_ssl = true
-
-          request = Net::HTTP::Post.new(uri.request_uri, headers)
+          request = Net::HTTP::Post.new(uri.request_uri, 'Content-Type': 'application/x-www-form-urlencoded')
           request.set_form_data(body)
 
-          response = http.request(request)
-          json = JSON.parse(response.body)
+          res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }
+          begin
+            json = JSON.parse(res.body)
+          rescue JSON::ParserError
+            raise ConfigurationError, ErrorMessage.for(ErrorCode::INTERNAL_ERROR)
+          end
 
           VerificationResponse.new(json)
-        rescue JSON::ParserError
-          raise ConfigurationError, 'Unable to parse Cloudflare Turnstile verification response'
         end
       end
     end

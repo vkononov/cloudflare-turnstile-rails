@@ -1,6 +1,6 @@
 <%= form_for(book, remote: true, html: { id: turbo_form_id }) do |form| %>
   <% if book.errors.any? %>
-    <ul>
+    <ul class="error_explanation">
       <% book.errors.full_messages.each do |message| %>
         <li><%= message %></li>
       <% end %>

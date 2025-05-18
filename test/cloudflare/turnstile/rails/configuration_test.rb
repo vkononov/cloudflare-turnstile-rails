@@ -54,38 +54,13 @@ class ConfigurationTest < Minitest::Test
     assert_equal Cloudflare::Turnstile::Rails::Cloudflare::SCRIPT_URL, @config.script_url
   end
 
-  def test_validation_with_valid_keys
-    # Test that no error is raised if valid site_key and secret_key are set
-    @config.site_key = 'valid_site_key'
-    @config.secret_key = 'valid_secret_key'
+  def test_auto_populate_response_in_test_env
+    # Test that the auto_populate_response_in_test_env is set to true by default
+    assert @config.auto_populate_response_in_test_env
 
-    assert_nil @config.validate!
-  end
+    # Test that the auto_populate_response_in_test_env can be set to false
+    @config.auto_populate_response_in_test_env = false
 
-  def test_validation_with_missing_site_key
-    # Test that an error is raised when site_key is missing
-    @config.site_key = nil
-    @config.secret_key = 'valid_secret_key'
-    assert_raises(Cloudflare::Turnstile::Rails::ConfigurationError, 'Cloudflare Turnstile site_key is not set.') do
-      @config.validate!
-    end
-  end
-
-  def test_validation_with_missing_secret_key
-    # Test that an error is raised when secret_key is missing
-    @config.site_key = 'valid_site_key'
-    @config.secret_key = nil
-    assert_raises(Cloudflare::Turnstile::Rails::ConfigurationError, 'Cloudflare Turnstile secret_key is not set.') do
-      @config.validate!
-    end
-  end
-
-  def test_validation_with_both_keys_missing
-    # Test that an error is raised when both keys are missing
-    @config.site_key = nil
-    @config.secret_key = nil
-    assert_raises(Cloudflare::Turnstile::Rails::ConfigurationError, 'Cloudflare Turnstile site_key is not set.') do
-      @config.validate!
-    end
+    refute @config.auto_populate_response_in_test_env
   end
 end

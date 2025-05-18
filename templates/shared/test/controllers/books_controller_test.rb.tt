@@ -1,0 +1,75 @@
+require 'test_helper'
+
+class BooksControllerTest < ActionDispatch::IntegrationTest
+  include Rails.application.routes.url_helpers
+
+  setup do
+    Cloudflare::Turnstile::Rails.configure do |config|
+      config.site_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
+      config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA')
+    end
+  end
+
+  test 'GET /books/new renders the new form' do
+    get new_book_url
+
+    assert_response :success
+    assert_select 'form#book-form'
+    # should include exactly one widget container
+    assert_select 'div.cf-turnstile', count: 1
+  end
+
+  test 'GET /books/new2 renders two separate forms' do
+    get new2_books_url
+
+    assert_response :success
+    assert_select 'form#book-form1', count: 1
+    assert_select 'form#book-form2', count: 1
+    # each should have its own widget container
+    assert_select 'form#book-form1 div.cf-turnstile', count: 1
+    assert_select 'form#book-form2 div.cf-turnstile', count: 1
+  end
+
+  test 'POST /books with valid title and passing Turnstile → redirect' do
+    Cloudflare::Turnstile::Rails.configuration.auto_populate_response_in_test_env = true
+    post books_url, params: { book: { title: 'Valid Title' }}
+
+    assert_redirected_to new_book_url
+    assert_equal 'Book was successfully created.', flash[:notice]
+  end
+
+  test 'POST /books with blank title but passing Turnstile → re-render new' do
+    post books_url, params: { book: { title: '' } }
+
+    assert_response :unprocessable_entity
+    assert_template :new
+    assert_select 'ul.error_explanation'
+    assert_select 'div.cf-turnstile', count: 1
+  end
+
+  test 'POST /books with invalid Turnstile key → re-render new' do
+    Cloudflare::Turnstile::Rails.configuration.secret_key = '2x0000000000000000000000000000000AA'
+    post books_url, params: { book: { title: 'Anything' } }
+
+    assert_response :unprocessable_entity
+    assert_template :new
+    assert_includes assigns(:book).errors[:base].first.downcase, 'turnstile'
+  end
+
+  test 'POST /books (AJAX) with invalid model returns JS' do
+    post books_url, params: { book: { title: '' } }, xhr: true
+
+    assert_response :success
+    assert_equal Mime[:js].to_s, response.media_type
+  end
+<% if Gem::Version.new(Rails.version) >= Gem::Version.new("7.0.0") -%>
+
+  test 'POST /books (Turbo Stream) replaces form partial' do
+    post books_url(format: :turbo_stream), params: { book: { title: '' }, turbo_form_id: 'book-form' }
+
+    assert_response :success
+    assert_match(/<turbo-stream action="replace" target="book-form">/, response.body)
+    assert_match(/<form[^>]+id="book-form"/, response.body)
+  end
+<% end -%>
+end
