@@ -44,7 +44,7 @@ module Cloudflare
       end
 
       module Verification
-        def self.verify(response:, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+        def self.verify(response: nil, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
           if response.nil? || response.strip.empty?
             unless ::Rails.env.test? && Rails.configuration.auto_populate_response_in_test_env
               raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_RESPONSE)
