@@ -87,18 +87,28 @@ However, it is recommended to match your `theme` and `language` to your app’s 
 In your controller, call:
 
 ```ruby
-if verify_turnstile(model: @user)
-  # success → returns a VerificationResponse object
+if valid_turnstile?(model: @user) # or turnstile_valid?(model: @user)
+  # success → returns true
 else
   # failure → returns false and adds errors to `@user`
   render :new, status: :unprocessable_entity
 end
 ```
 
-* In addition to the `model` option, you can pass any **siteverify** parameters (e.g., `secret`, `remoteip`, `idempotency_key`) supported by Cloudflare’s server-side validation API:
+* In addition to the `model` option, you can pass any **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s server-side validation API:
   [https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
 
-* On success, `verify_turnstile` returns a `VerificationResponse` (with methods like `.success?`, `.errors`, `.action`, `.cdata`), so you can inspect frontend-set values (`data-action`, `data-cdata`, etc.). On failure it returns `false` and adds a validation error to your model (if provided).
+If you need to examine the contents of the Turnstile response, use the `verify_turnstile` method instead:
+
+```ruby
+result = verify_turnstile(model: @user)
+if result.success?
+  # success → returns VerificationResponse
+else
+  # failure → returns VerificationResponse and adds errors to `@user`
+end
+puts result.inspect
+```
 
 ### Turbo & Turbo Streams Support
 

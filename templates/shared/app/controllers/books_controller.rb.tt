@@ -12,7 +12,7 @@ class BooksController < ApplicationController
     @book = Book.new(book_params)
 
     respond_to do |format|
-      if verify_turnstile(model: @book) && @book.valid?
+      if valid_turnstile?(model: @book) && @book.valid?
         format.html { redirect_to new_book_url, notice: "Book was successfully created." }
       else
         format.html { render :new, status: :unprocessable_entity }
