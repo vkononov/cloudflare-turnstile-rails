@@ -1,3 +1,5 @@
+require 'net/http'
+
 require_relative 'constants/cloudflare'
 
 module Cloudflare

@@ -29,5 +29,10 @@ Minitest/MultipleAssertions:
 Style/Documentation:
   Enabled: false
 
+Style/EmptyElse:
+  Exclude:
+    - README.md
+
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
+
