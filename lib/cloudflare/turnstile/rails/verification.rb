@@ -51,7 +51,6 @@ module Cloudflare
             end
 
             response = 'dummy-response'
-
           end
 
           secret ||= Rails.configuration.secret_key

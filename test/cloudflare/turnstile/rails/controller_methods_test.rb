@@ -99,7 +99,7 @@ module Cloudflare
           end
         end
 
-        def test_verify_turnstile_passes_options_to_verify
+        def test_verify_turnstile_passes_options_to_verify # rubocop:disable Metrics/MethodLength
           captured = {}
           fake = VerificationResponse.new({ 'success' => true })
 

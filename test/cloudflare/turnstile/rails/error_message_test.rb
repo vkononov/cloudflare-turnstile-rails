@@ -27,12 +27,9 @@ module Cloudflare
 
         def test_map_values_are_strings_and_frozen
           @map.each do |code, message|
-            assert_instance_of String, message,
-                               "MAP[#{code.inspect}] should be String"
-            assert_predicate message, :frozen?,
-                             "MAP[#{code.inspect}] message should be frozen"
-            refute_empty message,
-                         "MAP[#{code.inspect}] message should not be empty"
+            assert_instance_of String, message, "MAP[#{code.inspect}] should be String"
+            assert_predicate message, :frozen?, "MAP[#{code.inspect}] message should be frozen"
+            refute_empty message, "MAP[#{code.inspect}] message should not be empty"
           end
         end
 
@@ -47,9 +44,7 @@ module Cloudflare
             base = @map[code]
             expected = "#{base} (#{code})"
 
-            assert_equal expected,
-                         ErrorMessage.for(code),
-                         "ErrorMessage.for(#{code.inspect}) should append the code"
+            assert_equal expected, ErrorMessage.for(code), "ErrorMessage.for(#{code.inspect}) should append the code"
           end
         end
 
@@ -57,17 +52,13 @@ module Cloudflare
           unknown = 'some-unknown-code'
           expected = "#{@default} (#{unknown})"
 
-          assert_equal expected,
-                       ErrorMessage.for(unknown),
-                       'ErrorMessage.for unknown code should use DEFAULT'
+          assert_equal expected, ErrorMessage.for(unknown), 'ErrorMessage.for unknown code should use DEFAULT'
         end
 
         def test_for_nil_code_uses_default_and_appends_nil
           expected = "#{@default} ()"
 
-          assert_equal expected,
-                       ErrorMessage.for(nil),
-                       "ErrorMessage.for(nil) should append '(nil)'"
+          assert_equal expected, ErrorMessage.for(nil), "ErrorMessage.for(nil) should append '(nil)'"
         end
       end
     end
