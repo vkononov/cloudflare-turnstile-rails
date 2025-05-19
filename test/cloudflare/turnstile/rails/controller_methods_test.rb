@@ -49,7 +49,6 @@ module Cloudflare
         end
 
         def test_missing_secret_raises
-          @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
           Rails.configuration.secret_key = nil
           err = assert_raises(ConfigurationError) { verify_turnstile(model: @model, response: 'tok') }
           assert_equal ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET), err.message
@@ -58,7 +57,6 @@ module Cloudflare
         def test_successful_verification_returns_response
           fake = VerificationResponse.new({ 'success' => true })
           Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
             result = verify_turnstile(model: @model)
 
             assert_equal fake, result
@@ -68,9 +66,8 @@ module Cloudflare
 
         def test_valid_turnstile_on_success
           fake = VerificationResponse.new({ 'success' => true })
-          Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
 
+          Verification.stub(:verify, fake) do
             assert valid_turnstile?(model: @model)
           end
         end
@@ -81,7 +78,6 @@ module Cloudflare
 
           fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [code]})
           Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
             result = verify_turnstile(model: @model)
 
             refute_predicate result, :success?
@@ -92,9 +88,8 @@ module Cloudflare
         def test_valid_turnstile_on_failure
           code = ErrorCode::INVALID_INPUT_RESPONSE
           fake = VerificationResponse.new({'success' => false, 'error-codes' => [code]})
-          Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
 
+          Verification.stub(:verify, fake) do
             refute valid_turnstile?(model: @model)
           end
         end
@@ -107,7 +102,6 @@ module Cloudflare
             captured.merge!(opts)
             fake
           }) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
             verify_turnstile(
               model: @model, secret: 'sk', response: 'explicit', remoteip: '1.2.3.4', idempotency_key: 'my-key'
             )
@@ -122,21 +116,14 @@ module Cloudflare
         def test_turnstile_valid_alias_success
           fake = VerificationResponse.new({ 'success' => true })
           Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
-
             assert valid_turnstile?(model: @model)
             assert turnstile_valid?(model: @model)
           end
         end
 
         def test_turnstile_valid_alias_failure
-          fake = VerificationResponse.new(
-            {'success' => false,
-             'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE]}
-          )
+          fake = VerificationResponse.new({'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE]})
           Verification.stub(:verify, fake) do
-            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'tok'
-
             refute valid_turnstile?(model: @model)
             refute turnstile_valid?(model: @model)
           end
@@ -148,6 +135,22 @@ module Cloudflare
 
           assert_equal m1.owner, m2.owner
           assert_equal m1.source_location, m2.source_location
+        end
+
+        def test_response_is_injected_from_params_when_not_provided
+          captured = {}
+          fake = VerificationResponse.new({ 'success' => true })
+
+          Verification.stub(:verify, lambda { |**opts|
+            captured.merge!(opts)
+            fake
+          }) do
+            @params[Cloudflare::RESPONSE_FIELD_NAME] = 'param-from-params'
+            result = verify_turnstile(model: @model)
+
+            assert_equal fake, result
+            assert_equal 'param-from-params', captured[:response]
+          end
         end
       end
     end
