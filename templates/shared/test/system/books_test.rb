@@ -1,6 +1,6 @@
 require 'application_system_test_case'
 
-class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLength
+class BooksTest < ApplicationSystemTestCase
   setup do
     Cloudflare::Turnstile::Rails.configure do |config|
       config.site_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
@@ -65,9 +65,7 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
-      Cloudflare::Turnstile::Rails::ErrorCode::INVALID_INPUT_SECRET
-    )
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 
@@ -77,9 +75,7 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
-      Cloudflare::Turnstile::Rails::ErrorCode::INVALID_INPUT_RESPONSE
-    )
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 
@@ -89,7 +85,7 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Turnstile token has already been used or expired.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 

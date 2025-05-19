@@ -10,8 +10,7 @@ module Cloudflare
           result = Rails::Verification.verify(response: response, **opts)
 
           unless result.success?
-            code = result.errors.first
-            message = ErrorMessage.for(code)
+            message = ErrorMessage::DEFAULT
             model&.errors&.add(:base, message)
           end
 

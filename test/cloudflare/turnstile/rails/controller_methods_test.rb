@@ -72,9 +72,9 @@ module Cloudflare
           end
         end
 
-        def test_verification_failure_adds_mapped_error
+        def test_verification_failure_adds_default_error
           code = ErrorCode::TIMEOUT_OR_DUPLICATE
-          message = ErrorMessage.for(code)
+          message = ErrorMessage::DEFAULT
 
           fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [code]})
           Verification.stub(:verify, fake) do
