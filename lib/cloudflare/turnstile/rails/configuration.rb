@@ -3,7 +3,7 @@ module Cloudflare
     module Rails
       class Configuration
         attr_writer :script_url
-        attr_accessor :site_key, :secret_key, :render, :onload
+        attr_accessor :site_key, :secret_key, :render, :onload, :auto_populate_response_in_test_env
 
         def initialize
           @script_url = Cloudflare::SCRIPT_URL
@@ -11,6 +11,7 @@ module Cloudflare
           @secret_key = nil
           @render = nil
           @onload = nil
+          @auto_populate_response_in_test_env = true
         end
 
         # Dynamically build the URL every time, so that
@@ -24,16 +25,6 @@ module Cloudflare
           params << "onload=#{CGI.escape(@onload)}" unless @onload.nil?
 
           params.empty? ? Cloudflare::SCRIPT_URL : "#{Cloudflare::SCRIPT_URL}?#{params.join('&')}"
-        end
-
-        def validate!
-          if site_key.nil? || site_key.strip.empty?
-            raise ConfigurationError, 'Cloudflare Turnstile site_key is not set.'
-          end
-
-          return unless secret_key.nil? || secret_key.strip.empty?
-
-          raise ConfigurationError, 'Cloudflare Turnstile secret_key is not set.'
         end
       end
     end

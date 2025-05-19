@@ -14,6 +14,7 @@ AllCops:
 Layout/LineLength:
   Max: 120
   Exclude:
+    - lib/cloudflare/turnstile/rails/constants/*.rb
     - cloudflare-turnstile-rails.gemspec
 
 Layout/SpaceInsideHashLiteralBraces:
@@ -28,5 +29,10 @@ Minitest/MultipleAssertions:
 Style/Documentation:
   Enabled: false
 
+Style/EmptyElse:
+  Exclude:
+    - README.md
+
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
+

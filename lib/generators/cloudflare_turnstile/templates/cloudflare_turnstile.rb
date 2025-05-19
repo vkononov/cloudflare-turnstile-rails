@@ -15,4 +15,9 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # If `script_url` is provided, it will be used directly and render/onload options will be ignored.
   # config.render = 'explicit'
   # config.onload = 'onloadTurnstileCallback'
+
+  # In the Rails Test environment, automatically fill in a dummy response if none was provided.
+  # This lets you keep existing controller tests without having to add
+  # params["cf-turnstile-response"] manually in every test.
+  # config.auto_populate_response_in_test_env = true
 end

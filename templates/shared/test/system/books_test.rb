@@ -44,12 +44,12 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
   end
 
-  test 'submitting the form before turnstile is ready shows an error and re-renders turnstile' do
+  test 'submitting the form before turnstile is ready passed when response is auto populated' do
     visit new_book_url
     click_on 'Create Book'
-
-    assert_text 'Turnstile verification missing.'
     wait_for_turnstile_inputs(1)
+
+    assert_selector 'li', text: "Title can't be blank"
   end
 
   test 'turnstile does not render when site key is invalid' do
@@ -65,7 +65,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Server misconfiguration: Turnstile secret key invalid.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 
@@ -75,7 +75,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Turnstile token is invalid.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 
@@ -85,7 +85,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text 'Turnstile token has already been used or expired.'
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
     wait_for_turnstile_inputs(1)
   end
 

@@ -6,6 +6,7 @@ source_paths.unshift(shared)
 append_to_file 'Gemfile', <<~RUBY
   gem 'appraisal', require: false
   gem 'minitest-retry', require: false
+  gem 'rails-controller-testing'
 
   if RUBY_VERSION >= '3.0.0'
     # Include gems that are no longer loaded from standard libraries
@@ -51,7 +52,7 @@ RUBY
   config/initializers/cloudflare_turnstile.rb
   config/routes.rb
   test/application_system_test_case.rb
-  test/controllers/books_controller_test.rb
+  test/controllers/books_controller_test.rb.tt
   test/system/books_test.rb
 ].each do |shared_path|
   if shared_path.end_with?('.tt')

@@ -6,8 +6,6 @@ module Cloudflare
       module Helpers
         def cloudflare_turnstile_tag(site_key: nil, include_script: true, **html_options) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
           site_key ||= Rails.configuration.site_key
-          Rails.configuration.validate!
-
           html_options[:class] = Cloudflare::WIDGET_CLASS unless html_options.key?(:class)
           html_options[:data] ||= {}
           html_options[:data][:sitekey] ||= site_key

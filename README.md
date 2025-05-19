@@ -84,21 +84,66 @@ However, it is recommended to match your `theme` and `language` to your app’s 
 
 ### Backend Validation
 
-In your controller, call:
+To validate a Turnstile response in your controller, use either `valid_turnstile?` or `turnstile_valid?`. Both methods behave identically and return a boolean. The `model` parameter is optional:
 
 ```ruby
-if verify_turnstile(model: @user)
-  # success → returns a VerificationResponse object
+if valid_turnstile?(model: @user)
+  # Passed: returns true
 else
-  # failure → returns false and adds errors to `@user`
+  # Failed: returns false, adds errors to @user
   render :new, status: :unprocessable_entity
 end
 ```
 
-* In addition to the `model` option, you can pass any **siteverify** parameters (e.g., `secret`, `remoteip`, `idempotency_key`) supported by Cloudflare’s server-side validation API:
-  [https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
+You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
+[Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
 
-* On success, `verify_turnstile` returns a `VerificationResponse` (with methods like `.success?`, `.errors`, `.action`, `.cdata`), so you can inspect frontend-set values (`data-action`, `data-cdata`, etc.). On failure it returns `false` and adds a validation error to your model (if provided).
+#### Accessing Full Validation Details
+
+To inspect the entire verification payload, use `verify_turnstile`. It returns a `VerificationResponse` object with detailed information:
+
+```ruby
+result = verify_turnstile(model: @user)
+```
+
+This method still adds errors to the model if verification fails. You can query the response:
+
+```ruby
+if result.success?
+  # Passed
+else
+  # Failed — inspect result.errors or result.raw
+end
+```
+
+#### Example Responses
+
+```ruby
+# Success:
+Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
+  'success' => true,
+  'error-codes' => [],
+  'challenge_ts' => '2025-05-19T02:52:31.179Z',
+  'hostname' => 'example.com',
+  'metadata' => { 'result_with_testing_key' => true }
+}
+
+# Failure:
+Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
+  'success' => false,
+  'error-codes' => ['invalid-input-response'],
+  'messages' => [],
+  'metadata' => { 'result_with_testing_key' => true }
+}
+```
+
+#### Response Methods
+
+The following instance methods are available on `VerificationResponse`:
+
+```plaintext
+action, cdata, challenge_ts, errors, hostname, metadata, raw, success?, to_h
+```
 
 ### Turbo & Turbo Streams Support
 

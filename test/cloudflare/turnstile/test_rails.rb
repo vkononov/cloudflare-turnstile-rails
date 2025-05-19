@@ -1,5 +1,7 @@
 require 'test_helper'
 
+require 'cloudflare/turnstile/rails/version'
+
 module Cloudflare
   module Turnstile
     class TestRails < Minitest::Test
