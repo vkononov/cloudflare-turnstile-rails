@@ -5,7 +5,7 @@ module Cloudflare
   module Turnstile
     module Rails
       module ControllerMethods
-        def verify_turnstile(model: nil, response: nil, **opts)
+        def verify_turnstile(model: nil, **opts)
           response ||= params[Cloudflare::RESPONSE_FIELD_NAME]
           result = Rails::Verification.verify(response: response, **opts)
 
