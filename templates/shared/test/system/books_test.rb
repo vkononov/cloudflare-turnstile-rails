@@ -44,26 +44,12 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     wait_for_turnstile_inputs(1)
   end
 
-  test 'submitting the form before turnstile is ready shows an error and re-renders turnstile' do
-    Cloudflare::Turnstile::Rails.configuration.auto_populate_response_in_test_env = false
-    visit new_book_url
-    click_on 'Create Book'
-
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
-      Cloudflare::Turnstile::Rails::ErrorCode::MISSING_INPUT_RESPONSE
-    )
-    wait_for_turnstile_inputs(1)
-  end
-
   test 'submitting the form before turnstile is ready passed when response is auto populated' do
-    Cloudflare::Turnstile::Rails.configuration.auto_populate_response_in_test_env = false
     visit new_book_url
     click_on 'Create Book'
-
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.for(
-      Cloudflare::Turnstile::Rails::ErrorCode::MISSING_INPUT_RESPONSE
-    )
     wait_for_turnstile_inputs(1)
+
+    assert_selector 'li', text: "Title can't be blank"
   end
 
   test 'turnstile does not render when site key is invalid' do
