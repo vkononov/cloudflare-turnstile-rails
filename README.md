@@ -1,6 +1,7 @@
 # Cloudflare Turnstile Rails
 
-[![Gem Version](https://badge.fury.io/rb/cloudflare-turnstile-rails.svg)](https://rubygems.org/gems/cloudflare-turnstile-rails)
+[![Gem Version](https://img.shields.io/gem/v/cloudflare-turnstile-rails.svg)](https://rubygems.org/gems/cloudflare-turnstile-rails)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Lint Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
 [![Test Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
 
@@ -10,7 +11,7 @@ A lightweight Rails helper for effortless Cloudflare Turnstile integration with 
 
 ## Features
 
-* **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `verify_turnstile(model:)` in controllers — no extra wiring.
+* **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
 * **CSP nonce support**: Honors Rails’s `content_security_policy_nonce` for secure inline scripts.
 * **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
 * **Error‑code mappings**: Human‑friendly messages for Cloudflare’s test keys and common failure codes.
@@ -18,6 +19,23 @@ A lightweight Rails helper for effortless Cloudflare Turnstile integration with 
 * **Lightweight**: Pure Ruby/Rails with only `net/http` and `json` dependencies.
 
 > **Note:** Even legacy Rails applications (5+) can leverage Cloudflare Turnstile by adding this gem.
+
+## Table of Contents
+
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Frontend Integration](#frontend-integration)
+  - [Backend Validation](#backend-validation)
+  - [CSP Nonce Support](#csp-nonce-support)
+  - [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
+  - [Turbolinks Support](#turbolinks-support)
+- [Automated Testing of Your Integration](#automated-testing-of-your-integration)
+- [Upgrade Guide](#upgrade-guide)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [License](#license)
+
 
 ## Getting Started
 
@@ -54,16 +72,14 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # Set your Cloudflare Turnstile Site Key and Secret Key.
   config.site_key   = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', nil)
   config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', nil)
-
-  # Optional: Append render or onload query params
-  # config.render = 'explicit'
-  # config.onload = 'onloadMyCallback'
 end
 ```
 
-### Frontend Integration
+ If you don't have Cloudflare Turnstile keys yet, you can use dummy keys for development and testing. See the [Automated Testing of Your Integration](#automated-testing-of-your-integration) section for more details.
 
-> The helper injects the Turnstile widget and accompanying JavaScript inline by default (honoring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
+> For production use, you can obtain your keys from the Cloudflare dashboard. Follow the instructions in the [Cloudflare Turnstile documentation](https://developers.cloudflare.com/turnstile/get-started/) to create a new site key and secret key.
+
+### Frontend Integration
 
 Include the widget in your views or forms:
 
@@ -139,11 +155,15 @@ Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
 
 #### Response Methods
 
-The following instance methods are available on `VerificationResponse`:
+The following instance methods are available in `VerificationResponse`:
 
 ```plaintext
 action, cdata, challenge_ts, errors, hostname, metadata, raw, success?, to_h
 ```
+
+### CSP Nonce Support
+
+The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompanying JavaScript inline by default (honoring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
 
 ### Turbo & Turbo Streams Support
 
@@ -159,7 +179,7 @@ templates / shared / cloudflare_turbolinks_ajax_cache.js
 
 into your application’s JavaScript entrypoint (for example `app/javascript/packs/application.js`). This script listens for Rails UJS `ajax:complete` events that return HTML, caches the response as a Turbolinks snapshot, and then restores it via `Turbolinks.visit`, ensuring forms with validation errors are re‑rendered seamlessly.
 
-## Testing Your Integration
+## Automated Testing of Your Integration
 
 Cloudflare provides dummy sitekeys and secret keys for development and testing. You can use these to simulate every possible outcome of a Turnstile challenge without touching your production configuration. For future updates, see [https://developers.cloudflare.com/turnstile/troubleshooting/testing/](https://developers.cloudflare.com/turnstile/troubleshooting/testing/).
 
@@ -183,12 +203,49 @@ Cloudflare provides dummy sitekeys and secret keys for development and testing. 
 
 Use these dummy values in your **development** environment to verify all flows. Ensure you match a dummy secret key with its corresponding sitekey when calling `verify_turnstile`. Development tokens will look like `XXXX.DUMMY.TOKEN.XXXX`.
 
+### Overriding Configuration in Tests
+
+You may also directly override site or secret keys at runtime within individual tests or in setup blocks:
+
+```ruby
+Cloudflare::Turnstile::Rails.configuration.site_key   = '1x00000000000000000000AA'
+Cloudflare::Turnstile::Rails.configuration.secret_key = '2x0000000000000000000000000000000AA'
+```
+
+### Controller Tests
+
+As long as `config.auto_populate_response_in_test_env` is set to `true` (default) in `cloudflare_turnstile.rb` and you're using a dummy secret key that always passes, your existing controller tests will pass without changes.
+
+If `config.auto_populate_response_in_test_env` is set to `false`, then you will need to manually include the `cf-turnstile-response` parameter in your test cases with any `value`. For example:
+
+```ruby
+post :create, params: { 'cf-turnstile-response': 'XXXX.DUMMY.TOKEN.XXXX' }
+```
+
+This will ensure that the Turnstile response is included in the request, allowing your controller to validate it as expected.
+
+### Feature/System Tests
+
+Assuming you're using a dummy key, you can confirm that the Turnstile widget is rendered correctly in Minitest with:
+
+```ruby
+assert_selector "input[name='cf-turnstile-response'][value*='DUMMY']", visible: :all, wait: 5
+```
+
+Or, if using RSpec:
+
+```ruby
+expect(page).to have_selector("input[name='cf-turnstile-response'][value*='DUMMY']", visible: :all, wait: 5)
+```
+
+This will cause the browser to wait up to 5 seconds for the widget to appear.
+
 ## Upgrade Guide
 
 This gem is fully compatible with Rails **5.0 and above**, and no special upgrade steps are required:
 
 * **Simply update Rails** in your application as usual.
-* Continue using the same `cloudflare_turnstile_tag` helper in your views and `verify_turnstile` in your controllers.
+* Continue using the same `cloudflare_turnstile_tag` helper in your views and `valid_turnstile?` in your controllers.
 * All Turbo, Turbo Streams, and Turbolinks integrations continue to work without changes.
 
 If you run into any issues after upgrading Rails, please [open an issue](https://github.com/vkononov/cloudflare-turnstile-rails/issues) so we can address it promptly.
