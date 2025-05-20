@@ -22,20 +22,19 @@ A lightweight Rails helper for effortless Cloudflare Turnstile integration with 
 
 ## Table of Contents
 
-* [Getting Started](#getting-started)
-
-  * [Prerequisites](#prerequisites)
-  * [Installation](#installation)
-  * [Frontend Integration](#frontend-integration)
-  * [Backend Validation](#backend-validation)
-  * [CSP Nonce Support](#csp-nonce-support)
-  * [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
-  * [Turbolinks Support](#turbolinks-support)
-* [Automated Testing of Your Integration](#automated-testing-of-your-integration)
-* [Upgrade Guide](#upgrade-guide)
-* [Troubleshooting](#troubleshooting)
-* [Development](#development)
-* [License](#license)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Frontend Integration](#frontend-integration)
+  - [Backend Validation](#backend-validation)
+  - [CSP Nonce Support](#csp-nonce-support)
+  - [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
+  - [Turbolinks Support](#turbolinks-support)
+- [Automated Testing of Your Integration](#automated-testing-of-your-integration)
+- [Upgrade Guide](#upgrade-guide)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [License](#license)
 
 
 ## Getting Started
