@@ -11,6 +11,14 @@ AllCops:
     - .git/**/*
     - vendor/bundle/**/*
 
+Layout/IndentationConsistency:
+  Exclude:
+    - README.md
+
+Layout/InitialIndentation:
+  Exclude:
+    - README.md
+
 Layout/LineLength:
   Max: 120
   Exclude:

@@ -5,25 +5,25 @@
 [![Lint Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
 [![Test Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
 
-A lightweight Rails helper for effortless Cloudflare Turnstile integration with Turbo support and CSP compliance.
+A lightweight Rails gem for effortless Cloudflare Turnstile integration with Turbo support and CSP compliance.
+
+Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/vkononov)
 
 ## Features
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
-* **CSP nonce support**: Honors Rails’s `content_security_policy_nonce` for secure inline scripts.
 * **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
-* **Error‑code mappings**: Human‑friendly messages for Cloudflare’s test keys and common failure codes.
+* **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
+* **CSP nonce support**: Honors Rails’s `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
 * **Lightweight**: Pure Ruby/Rails with only `net/http` and `json` dependencies.
 
-> **Note:** Even legacy Rails applications (5+) can leverage Cloudflare Turnstile by adding this gem.
 
 ## Table of Contents
 
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Frontend Integration](#frontend-integration)
   - [Backend Validation](#backend-validation)
@@ -39,59 +39,53 @@ A lightweight Rails helper for effortless Cloudflare Turnstile integration with 
 
 ## Getting Started
 
-### Prerequisites
-
-Before you begin, you should have your own Cloudflare Turnstile keys:
-
-- **Site Key** and **Secret Key** from Cloudflare.
-
-> Cloudflare provides extensive documentation for Turnstile [here](https://developers.cloudflare.com/turnstile/). It is highly recommended to read it to understand its options and idiosyncrasies.
-
 ### Installation
 
-Add the gem to your Gemfile and bundle:
+* Add the gem to your Gemfile and bundle:
 
-```ruby
-gem 'cloudflare-turnstile-rails'
-```
+  ```ruby
+  gem 'cloudflare-turnstile-rails'
+  ```
 
-```bash
-bundle install
-```
+* Run the following command to install the gem:
 
-Generate the default initializer:
+  ```bash
+  bundle install
+  ```
 
-```bash
-bin/rails generate cloudflare_turnstile:install
-```
+* Generate the default initializer:
 
-Configure your **Site Key** and **Secret Key** in `config/initializers/cloudflare_turnstile.rb`:
+  ```bash
+  bin/rails generate cloudflare_turnstile:install
+  ```
 
-```ruby
-Cloudflare::Turnstile::Rails.configure do |config|
-  # Set your Cloudflare Turnstile Site Key and Secret Key.
-  config.site_key   = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', nil)
-  config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', nil)
-end
-```
+* Configure your **Site Key** and **Secret Key** in `config/initializers/cloudflare_turnstile.rb`:
 
- If you don't have Cloudflare Turnstile keys yet, you can use dummy keys for development and testing. See the [Automated Testing of Your Integration](#automated-testing-of-your-integration) section for more details.
+  ```ruby
+  Cloudflare::Turnstile::Rails.configure do |config|
+    # Set your Cloudflare Turnstile Site Key and Secret Key.
+    config.site_key   = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', nil)
+    config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', nil)
+  end
+  ```
 
-> For production use, you can obtain your keys from the Cloudflare dashboard. Follow the instructions in the [Cloudflare Turnstile documentation](https://developers.cloudflare.com/turnstile/get-started/) to create a new site key and secret key.
+  If you don't have Cloudflare Turnstile keys yet, you can use dummy keys for development and testing. See the [Automated Testing of Your Integration](#automated-testing-of-your-integration) section for more details.
+
+  > For production use, you can obtain your keys from the Cloudflare dashboard. Follow the instructions in the [Cloudflare Turnstile documentation](https://developers.cloudflare.com/turnstile/get-started/) to create a new site key and secret key.
 
 ### Frontend Integration
 
-Include the widget in your views or forms:
+* Include the widget in your views or forms:
 
-```erb
-<%= cloudflare_turnstile_tag %>
-```
+   ```erb
+   <%= cloudflare_turnstile_tag %>
+   ```
 
-However, it is recommended to match your `theme` and `language` to your app’s design and locale. You can do this by passing `data` attributes to the helper:
+  That's it! Though it is recommended to match your `theme` and `language` to your app’s design and locale:
 
-```erb
-<%= cloudflare_turnstile_tag data: { theme: 'auto', language: 'en' } %>
-```
+   ```erb
+   <%= cloudflare_turnstile_tag data: { theme: 'auto', language: 'en' } %>
+   ```
 
 * For all available **data-**\* options (e.g., `action`, `cdata`, `theme`, etc.), refer to the official Cloudflare client-side rendering docs:
   [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configurations](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configurations)
@@ -100,66 +94,66 @@ However, it is recommended to match your `theme` and `language` to your app’s 
 
 ### Backend Validation
 
-To validate a Turnstile response in your controller, use either `valid_turnstile?` or `turnstile_valid?`. Both methods behave identically and return a boolean. The `model` parameter is optional:
+#### Simple Validation
 
-```ruby
-if valid_turnstile?(model: @user)
-  # Passed: returns true
-else
-  # Failed: returns false, adds errors to @user
-  render :new, status: :unprocessable_entity
-end
-```
+* To validate a Turnstile response in your controller, use either `valid_turnstile?` or `turnstile_valid?`. Both methods behave identically and return a `boolean`. The `model` parameter is optional but recommended for automatic error handling:
 
-You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
-[Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
+  ```ruby
+  if valid_turnstile?(model: @user)
+    # Passed: returns true
+  else
+    # Failed: returns false, adds errors to @user
+    render :new, status: :unprocessable_entity
+  end
+  ```
 
-#### Accessing Full Validation Details
+* You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
+  [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
 
-To inspect the entire verification payload, use `verify_turnstile`. It returns a `VerificationResponse` object with detailed information:
+#### Advanced Validation
 
-```ruby
-result = verify_turnstile(model: @user)
-```
+* To inspect the entire verification payload, use `verify_turnstile`. It returns a `VerificationResponse` object with detailed information:
 
-This method still adds errors to the model if verification fails. You can query the response:
+  ```ruby
+  result = verify_turnstile(model: @user)
+  ```
 
-```ruby
-if result.success?
-  # Passed
-else
-  # Failed — inspect result.errors or result.raw
-end
-```
+  This method still adds errors to the model if verification fails. You can query the response:
 
-#### Example Responses
+  ```ruby
+  if result.success?
+    # Passed
+  else
+    # Failed — inspect result.errors or result.raw
+  end
+  ```
 
-```ruby
-# Success:
-Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
-  'success' => true,
-  'error-codes' => [],
-  'challenge_ts' => '2025-05-19T02:52:31.179Z',
-  'hostname' => 'example.com',
-  'metadata' => { 'result_with_testing_key' => true }
-}
+* The `VerificationResponse` object contains the raw response from Cloudflare:
 
-# Failure:
-Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
-  'success' => false,
-  'error-codes' => ['invalid-input-response'],
-  'messages' => [],
-  'metadata' => { 'result_with_testing_key' => true }
-}
-```
+  ```ruby
+  # Success:
+  Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
+    'success' => true,
+    'error-codes' => [],
+    'challenge_ts' => '2025-05-19T02:52:31.179Z',
+    'hostname' => 'example.com',
+    'metadata' => { 'result_with_testing_key' => true }
+  }
 
-#### Response Methods
+  # Failure:
+  Cloudflare::Turnstile::Rails::VerificationResponse @raw = {
+    'success' => false,
+    'error-codes' => ['invalid-input-response'],
+    'messages' => [],
+    'metadata' => { 'result_with_testing_key' => true }
+  }
+  ```
 
-The following instance methods are available in `VerificationResponse`:
+* The following instance methods are available in `VerificationResponse`:
 
-```plaintext
-action, cdata, challenge_ts, errors, hostname, metadata, raw, success?, to_h
-```
+  ```plaintext
+  action, cdata, challenge_ts, errors, hostname, metadata, raw, success?, to_h
+  ```
 
 ### CSP Nonce Support
 
@@ -325,14 +319,14 @@ rails new test_app \
 Get the exact command from the `test/integration/` folder, where each integration test has a corresponding Rails app template. For example, to replicate the `test/integration/rails7.rb` test for Rails `v7.0.4`, run:
 
 ```bash
-gem install rails -v 7_0_4
+gem install rails -v 7.0.4
 
-rails _7_0_4_ new test_app \
+rails _7.0.4_ new test_app \
   --skip-git --skip-keeps \
   --skip-action-mailer --skip-action-mailbox --skip-action-text \
   --skip-active-record --skip-active-job --skip-active-storage \
   --skip-action-cable --skip-jbuilder --skip-bootsnap --skip-api \
-  -m test/integration/rails_7_0_4.rb
+  -m templates/template.rb
 ```
 
 Then:
