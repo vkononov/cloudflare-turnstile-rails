@@ -9,7 +9,7 @@ require 'cloudflare/turnstile/rails/verification'
 module Cloudflare
   module Turnstile
     module Rails
-      class ControllerMethodsTest < Minitest::Test
+      class ControllerMethodsTest < Minitest::Test # rubocop:disable Metrics/ClassLength
         include ControllerMethods
 
         # –– Dummy model with minimal .errors interface ––#
@@ -43,9 +43,14 @@ module Cloudflare
           singleton_class.send(:remove_method, :params)
         end
 
-        def test_missing_response_raises
-          err = assert_raises(ConfigurationError) { verify_turnstile(model: @model) }
-          assert_equal ErrorMessage.for(ErrorCode::MISSING_INPUT_RESPONSE), err.message
+        def test_missing_response_adds_default_error
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::MISSING_INPUT_RESPONSE] })
+          Verification.stub(:verify, fake) do
+            result = verify_turnstile(model: @model)
+
+            assert_equal fake, result
+            assert_equal [[:base, ErrorMessage::DEFAULT]], @model.errors.added
+          end
         end
 
         def test_missing_secret_raises
