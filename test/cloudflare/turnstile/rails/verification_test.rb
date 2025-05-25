@@ -74,11 +74,13 @@ module Cloudflare
             )
         end
 
-        def test_missing_response_raises
-          expected = ErrorMessage.for(ErrorCode::MISSING_INPUT_RESPONSE)
+        def test_missing_response_proceeds_and_returns_verification_response
+          stub_verify('success' => true, 'error-codes' => [])
+          resp = Verification.verify(response: '')
 
-          err = assert_raises(ConfigurationError) { Verification.verify(response: '') }
-          assert_equal expected, err.message
+          assert_kind_of VerificationResponse, resp
+          assert_predicate resp, :success?
+          assert_empty resp.errors
         end
 
         def test_missing_secret_raises
