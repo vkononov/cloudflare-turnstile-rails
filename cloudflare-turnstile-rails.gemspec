@@ -6,8 +6,8 @@ Gem::Specification.new do |spec|
   spec.authors = ['Vadim Kononov']
   spec.email = ['vadim@konoson.com']
 
-  spec.summary = 'Simple Cloudflare Turnstile integration for Ruby on Rails.'
-  spec.description = 'Integrates Cloudflare Turnstile into Rails applications, handling script injection, CSP-nonce support, and automatic Turbo/Turbolinks reinitialization.'
+  spec.summary = 'Cloudflare Turnstile gem for Rails with built-in Turbo and Turbolinks support and CSP compliance'
+  spec.description = 'Integrates Cloudflare Turnstile into Ruby on Rails applications, transparently reloads on Turbo and Turbolinks events, and embeds CSP-nonce-compliant scripts.'
   spec.homepage = 'https://github.com/vkononov/cloudflare-turnstile-rails'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 2.6.0'

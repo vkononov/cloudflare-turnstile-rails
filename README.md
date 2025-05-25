@@ -5,7 +5,7 @@
 [![Lint Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
 [![Test Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
 
-A lightweight Rails gem for effortless Cloudflare Turnstile integration with Turbo support and CSP compliance.
+Cloudflare Turnstile gem for Ruby on Rails with built-in Turbo and Turbolinks support and CSP compliance.
 
 Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 
