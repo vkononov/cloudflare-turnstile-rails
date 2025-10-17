@@ -1,4 +1,5 @@
 require 'net/http'
+require 'openssl'
 
 require_relative 'constants/cloudflare'
 
@@ -64,7 +65,22 @@ module Cloudflare
           request = Net::HTTP::Post.new(uri.request_uri, 'Content-Type': 'application/x-www-form-urlencoded')
           request.set_form_data(body)
 
-          res = Net::HTTP.start(uri.host, uri.port, use_ssl: true) { |http| http.request(request) }
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+          http.cert_store = OpenSSL::X509::Store.new
+          http.cert_store.set_default_paths
+
+          begin
+            res = http.request(request)
+          rescue Net::OpenTimeout, Net::ReadTimeout => e
+            raise ConfigurationError, "Turnstile verification timed out: #{e.message}"
+          rescue OpenSSL::SSL::SSLError => e
+            raise ConfigurationError, "SSL verification failed: #{e.message}"
+          rescue SocketError, Errno::ECONNREFUSED => e
+            raise ConfigurationError, "Network error during Turnstile verification: #{e.message}"
+          end
+
           begin
             json = JSON.parse(res.body)
           rescue JSON::ParserError
