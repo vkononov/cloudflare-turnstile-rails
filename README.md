@@ -88,7 +88,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
    ```
 
 * For all available **data-**\* options (e.g., `action`, `cdata`, `theme`, etc.), refer to the official Cloudflare client-side rendering docs:
-  [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configurations](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configurations)
+  [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configuration-options](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configuration-options)
 * **Supported locales** for the widget UI can be found here:
   [https://developers.cloudflare.com/turnstile/reference/supported-languages/](https://developers.cloudflare.com/turnstile/reference/supported-languages/)
 
@@ -108,7 +108,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   ```
 
 * You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
-  [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#accepted-parameters)
+  [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#required-parameters)
 
 #### Advanced Validation
 
@@ -262,13 +262,13 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
   <%= cloudflare_turnstile_tag class: 'my-widget-class' %>
   ```
 
-- By default Turnstile targets elements with the `cf-turnstile` class. For more details, see Cloudflare’s [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicitly-render-the-turnstile-widget).
+- By default Turnstile targets elements with the `cf-turnstile` class. For more details, see Cloudflare’s [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering).
 
 **CSP Nonce Issues**
 - When using Rails’ CSP nonces, make sure `content_security_policy_nonce` is available in your view context — otherwise the Turnstile script may be blocked.
 
 **Server Validation Errors**
-- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare’s [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common error codes and test keys.
+- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare’s [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common [error codes](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/) and [test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/#dummy-sitekeys-and-secret-keys).
 
 > Still stuck? Check the Cloudflare Turnstile docs: [https://developers.cloudflare.com/turnstile/get-started/](https://developers.cloudflare.com/turnstile/get-started/)
 
@@ -297,7 +297,7 @@ bundle exec appraisal rake test
 
 ### Code Linting
 
-Enforce code style with RuboCop (latest Ruby only)::
+Enforce code style with RuboCop (latest Ruby only):se
 
 ```bash
 bundle exec rubocop
