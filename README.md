@@ -297,7 +297,7 @@ bundle exec appraisal rake test
 
 ### Code Linting
 
-Enforce code style with RuboCop (latest Ruby only):se
+Enforce code style with RuboCop (latest Ruby only):
 
 ```bash
 bundle exec rubocop
