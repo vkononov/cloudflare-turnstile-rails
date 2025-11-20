@@ -2,7 +2,7 @@ module Cloudflare
   module Turnstile
     module Rails
       module ErrorCode
-        # https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#error-codes
+        # https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#error-codes-reference
 
         MISSING_INPUT_SECRET = 'missing-input-secret'.freeze
         INVALID_INPUT_SECRET = 'invalid-input-secret'.freeze
