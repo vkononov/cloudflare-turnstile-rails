@@ -16,7 +16,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
 * **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
-* **CSP nonce support**: Honors Rails’s `content_security_policy_nonce` for secure inline scripts.
+* **CSP nonce support**: Honours Rails' `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
 * **Lightweight**: Pure Ruby/Rails with only `net/http` and `json` dependencies.
 
@@ -81,7 +81,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
    <%= cloudflare_turnstile_tag %>
    ```
 
-  That's it! Though it is recommended to match your `theme` and `language` to your app’s design and locale:
+  That's it! Though it is recommended to match your `theme` and `language` to your app's design and locale:
 
    ```erb
    <%= cloudflare_turnstile_tag data: { theme: 'auto', language: 'en' } %>
@@ -107,8 +107,19 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   end
   ```
 
-* You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
+* You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare's API:
   [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#required-parameters)
+
+  For example, to pass a custom remote IP address:
+
+  ```ruby
+  if valid_turnstile?(model: @user, remoteip: request.remote_ip)
+    # Passed with custom IP verification
+  else
+    # Failed
+    render :new, status: :unprocessable_entity
+  end
+  ```
 
 #### Advanced Validation
 
@@ -157,7 +168,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 
 ### CSP Nonce Support
 
-The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompanying JavaScript inline by default (honoring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
+The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompanying JavaScript inline by default (honouring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
 
 ### Turbo & Turbo Streams Support
 
@@ -171,7 +182,7 @@ If your Rails app still uses Turbolinks (rather than Turbo), you can add a small
 templates / shared / cloudflare_turbolinks_ajax_cache.js
 ```
 
-into your application’s JavaScript entrypoint (for example `app/javascript/packs/application.js`). This script listens for Rails UJS `ajax:complete` events that return HTML, caches the response as a Turbolinks snapshot, and then restores it via `Turbolinks.visit`, ensuring forms with validation errors are re‑rendered seamlessly.
+into your application's JavaScript entrypoint (for example `app/javascript/packs/application.js`). This script listens for Rails UJS `ajax:complete` events that return HTML, caches the response as a Turbolinks snapshot, and then restores it via `Turbolinks.visit`, ensuring forms with validation errors are re‑rendered seamlessly.
 
 ## Automated Testing of Your Integration
 
@@ -250,7 +261,7 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
 - If more than one Turnstile widget appears in the same container, this indicates a bug in the gem—please [open an issue](https://github.com/vkononov/cloudflare-turnstile-rails/issues) so it can be addressed.
 
 **Explicit Rendering**
-- If you’ve configured explicit mode (`config.render = 'explicit'` or `cloudflare_turnstile_tag render: 'explicit'`) but widgets still auto-render, override the default container class:
+- If you've configured explicit mode (`config.render = 'explicit'` or `cloudflare_turnstile_tag render: 'explicit'`) but widgets still auto-render, override the default container class:
 
   ```erb
   <%= cloudflare_turnstile_tag class: nil %>
@@ -262,13 +273,13 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
   <%= cloudflare_turnstile_tag class: 'my-widget-class' %>
   ```
 
-- By default Turnstile targets elements with the `cf-turnstile` class. For more details, see Cloudflare’s [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering).
+- By default Turnstile targets elements with the `cf-turnstile` class. For more details, see Cloudflare's [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#explicit-rendering).
 
 **CSP Nonce Issues**
-- When using Rails’ CSP nonces, make sure `content_security_policy_nonce` is available in your view context — otherwise the Turnstile script may be blocked.
+- When using Rails' CSP nonces, make sure `content_security_policy_nonce` is available in your view context — otherwise the Turnstile script may be blocked.
 
 **Server Validation Errors**
-- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare’s [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common [error codes](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/) and [test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/#dummy-sitekeys-and-secret-keys).
+- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare's [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common [error codes](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/) and [test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/#dummy-sitekeys-and-secret-keys).
 
 > Still stuck? Check the Cloudflare Turnstile docs: [https://developers.cloudflare.com/turnstile/get-started/](https://developers.cloudflare.com/turnstile/get-started/)
 
@@ -284,7 +295,7 @@ bin/setup
 
 ### Running the Test Suite
 
-[Appraisal](https://github.com/thoughtbot/appraisal) is used to run the full test suite against multiple Rails versions by generating separate Gemfiles and isolating each environment. To install dependencies and exercise all unit, integration and system tests:
+[Appraisal](https://github.com/thoughtbot/appraisal) is used to run the full test suite against multiple Rails versions by generating separate Gemfiles and isolating each environment.
 
 Execute **all** tests (unit, integration, system) across every Ruby & Rails combination:
 
@@ -293,7 +304,7 @@ bundle exec appraisal install
 bundle exec appraisal rake test
 ```
 
-> **CI Note:** Our GitHub Actions [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml) runs this command on each Ruby/Rails combo and captures screenshots from system specs.
+> **CI Note:** The GitHub Action [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml) runs this command on each Ruby/Rails combo and captures screenshots from system specs.
 
 ### Code Linting
 
