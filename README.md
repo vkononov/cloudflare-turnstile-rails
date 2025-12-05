@@ -16,7 +16,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
 * **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
-* **CSP nonce support**: Honors Rails’s `content_security_policy_nonce` for secure inline scripts.
+* **CSP nonce support**: Honours Rails’s `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
 * **Lightweight**: Pure Ruby/Rails with only `net/http` and `json` dependencies.
 
@@ -107,8 +107,19 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   end
   ```
 
-* You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare’s API:
+* You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare's API:
   [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#required-parameters)
+
+  For example, to pass a custom remote IP address:
+
+  ```ruby
+  if valid_turnstile?(model: @user, remoteip: request.remote_ip)
+    # Passed with custom IP verification
+  else
+    # Failed
+    render :new, status: :unprocessable_entity
+  end
+  ```
 
 #### Advanced Validation
 
@@ -157,7 +168,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 
 ### CSP Nonce Support
 
-The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompanying JavaScript inline by default (honoring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
+The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompanying JavaScript inline by default (honouring Rails' `content_security_policy_nonce`), so there's no need to allow `unsafe-inline` in your CSP.
 
 ### Turbo & Turbo Streams Support
 
@@ -284,7 +295,7 @@ bin/setup
 
 ### Running the Test Suite
 
-[Appraisal](https://github.com/thoughtbot/appraisal) is used to run the full test suite against multiple Rails versions by generating separate Gemfiles and isolating each environment. To install dependencies and exercise all unit, integration and system tests:
+[Appraisal](https://github.com/thoughtbot/appraisal) is used to run the full test suite against multiple Rails versions by generating separate Gemfiles and isolating each environment.
 
 Execute **all** tests (unit, integration, system) across every Ruby & Rails combination:
 
@@ -293,7 +304,7 @@ bundle exec appraisal install
 bundle exec appraisal rake test
 ```
 
-> **CI Note:** Our GitHub Actions [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml) runs this command on each Ruby/Rails combo and captures screenshots from system specs.
+> **CI Note:** The GitHub Action [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml) runs this command on each Ruby/Rails combo and captures screenshots from system specs.
 
 ### Code Linting
 
