@@ -16,7 +16,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
 * **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
-* **CSP nonce support**: Honours Rails's `content_security_policy_nonce` for secure inline scripts.
+* **CSP nonce support**: Honours Rails' `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
 * **Lightweight**: Pure Ruby/Rails with only `net/http` and `json` dependencies.
 
