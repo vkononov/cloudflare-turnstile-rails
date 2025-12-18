@@ -77,25 +77,27 @@ module Cloudflare
           assert_match(/Token/i, de_message)
         end
 
-        def test_unsupported_locale_falls_back_to_english
+        def test_unsupported_locale_falls_back_to_fallback
           # Add Yoruba to available locales (but we have no translations for it)
+          # Without Rails fallbacks configured, it should use FALLBACK
           I18n.available_locales = %i[en de yo]
           I18n.locale = :yo
 
           result = ErrorMessage.send(:translate, :default)
 
-          assert_equal "We could not verify that you're human. Please try again.", result
+          # Falls back to FALLBACK constant (Rails fallbacks not configured in test)
+          assert_equal ErrorMessage::FALLBACK, result
         end
 
-        def test_unsupported_locale_with_known_code_falls_back_to_english
+        def test_unsupported_locale_with_known_code_falls_back_to_fallback
           # Add Yoruba to available locales (but we have no translations for it)
           I18n.available_locales = %i[en de yo]
           I18n.locale = :yo
 
           result = ErrorMessage.for(ErrorCode::TIMEOUT_OR_DUPLICATE)
 
-          # Should contain the English translation
-          assert_match(/token/i, result)
+          # Falls back to FALLBACK (Rails fallbacks not configured in test)
+          assert result.start_with?(ErrorMessage::FALLBACK)
           assert result.end_with?("(#{ErrorCode::TIMEOUT_OR_DUPLICATE})")
         end
 

@@ -9,8 +9,8 @@ module Cloudflare
 
         # Fallback message used when no translation exists for an error code.
         # This can happen if Cloudflare introduces a new error code that we
-        # haven't added to our locale files yet. The 'translate' method tries
-        # the current locale first, then English, and finally falls back here.
+        # haven't added to our locale files yet. Rails I18n fallbacks are
+        # respected if configured (config.i18n.fallbacks = true).
         FALLBACK = "We could not verify that you're human. Please try again.".freeze
 
         def self.for(code)
@@ -40,8 +40,7 @@ module Cloudflare
         end
 
         private_class_method def self.translate(key)
-          I18n.t(key, scope: SCOPE, default: nil) ||
-            I18n.t(key, scope: SCOPE, locale: :en, default: FALLBACK)
+          I18n.t(key, scope: SCOPE, default: FALLBACK)
         end
       end
     end
