@@ -9,3 +9,4 @@ require 'action_view/railtie'
 require 'cloudflare/turnstile/rails'
 
 require 'minitest/autorun'
+require 'minitest/mock'

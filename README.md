@@ -187,7 +187,7 @@ into your application's JavaScript entrypoint (for example `app/javascript/packs
 
 ## Internationalization (I18n)
 
-Error messages are fully internationalized using Rails I18n. See [bundled translations](lib/cloudflare/turnstile/rails/locales). Pull requests for new languages or corrections to existing translations are always welcome!
+Error messages are fully internationalized using Rails I18n. See [all languages](lib/cloudflare/turnstile/rails/locales) bundled with the gem.
 
 ### Overriding Translations
 
