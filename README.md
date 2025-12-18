@@ -31,6 +31,10 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   - [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
   - [Turbolinks Support](#turbolinks-support)
 - [Internationalization (I18n)](#internationalization-i18n)
+  - [Overriding Translations](#overriding-translations)
+  - [Locale Fallbacks](#locale-fallbacks)
+  - [Adding New Languages](#adding-new-languages)
+  - [Available Translation Keys](#available-translation-keys)
 - [Automated Testing of Your Integration](#automated-testing-of-your-integration)
 - [Upgrade Guide](#upgrade-guide)
 - [Troubleshooting](#troubleshooting)
@@ -203,6 +207,14 @@ en:
 ```
 
 Your application's translations take precedence over the gem's defaults.
+
+### Locale Fallbacks
+
+This gem respects Rails' built-in I18n fallback configuration. When `config.i18n.fallbacks = true`, Rails will try fallback locales (including `default_locale`) before using the gem's default message.
+
+For example, with fallbacks enabled and a chain of `:pt → :es`, if a Portuguese translation is missing, Rails will automatically try Spanish before falling back to the gem's default message.
+
+> **Note:** If you use regional locales (e.g., `:pt-BR`, `:zh-CN`), you should enable fallbacks. Without `config.i18n.fallbacks = true`, a locale like `:pt-BR` will **not** automatically fall back to `:pt`, and users will see the generic fallback message instead of the Portuguese translation.
 
 ### Adding New Languages
 

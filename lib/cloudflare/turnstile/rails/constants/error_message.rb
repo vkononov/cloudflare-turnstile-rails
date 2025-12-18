@@ -39,6 +39,12 @@ module Cloudflare
           code.to_s.tr('-', '_').to_sym
         end
 
+        # Looks up translation for the given key in the current locale.
+        #
+        # Fallback behavior depends on the app's Rails configuration:
+        # - With `config.i18n.fallbacks = true`: tries current locale, then
+        #   fallback chain (e.g., :pt → :sp), then FALLBACK constant
+        # - Without fallbacks (default): tries current locale, then FALLBACK
         private_class_method def self.translate(key)
           I18n.t(key, scope: SCOPE, default: FALLBACK)
         end
