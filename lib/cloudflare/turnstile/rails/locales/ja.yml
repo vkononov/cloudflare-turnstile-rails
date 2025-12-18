@@ -1,0 +1,11 @@
+ja:
+  cloudflare_turnstile:
+    errors:
+      default: "あなたが人間であることを確認できませんでした。もう一度お試しください。"
+      missing_input_secret: "Turnstileシークレットキーがありません。"
+      invalid_input_secret: "Turnstileシークレットパラメータが無効であるか、存在しないか、またはテストキーで非テストレスポンスが使用されています。"
+      missing_input_response: "Turnstileレスポンスパラメータが提供されていません。"
+      invalid_input_response: "Turnstileレスポンスパラメータが無効です。"
+      bad_request: "Turnstileリクエストは形式が不正なため拒否されました。"
+      timeout_or_duplicate: "Turnstileトークンは既に使用されたか、有効期限が切れています。"
+      internal_error: "レスポンスの検証中にTurnstile内部エラーが発生しました。もう一度お試しください。"

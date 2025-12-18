@@ -1,0 +1,11 @@
+nl:
+  cloudflare_turnstile:
+    errors:
+      default: "We konden niet verifiëren dat je een mens bent. Probeer het opnieuw."
+      missing_input_secret: "De geheime Turnstile-sleutel ontbreekt."
+      invalid_input_secret: "De geheime Turnstile-parameter was ongeldig, bestond niet, of is een testsleutel met een niet-testrespons."
+      missing_input_response: "De Turnstile-responsparameter is niet opgegeven."
+      invalid_input_response: "De Turnstile-responsparameter is ongeldig."
+      bad_request: "Het Turnstile-verzoek is afgewezen omdat het onjuist was geformuleerd."
+      timeout_or_duplicate: "Het Turnstile-token is al gebruikt of verlopen."
+      internal_error: "Er is een interne Turnstile-fout opgetreden bij het valideren van de respons. Probeer het opnieuw."

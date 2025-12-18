@@ -1,0 +1,11 @@
+ru:
+  cloudflare_turnstile:
+    errors:
+      default: "Не удалось подтвердить, что вы человек. Пожалуйста, попробуйте ещё раз."
+      missing_input_secret: "Отсутствует секретный ключ Turnstile."
+      invalid_input_secret: "Секретный параметр Turnstile недействителен, не существует или является тестовым ключом с нетестовым ответом."
+      missing_input_response: "Параметр ответа Turnstile не был передан."
+      invalid_input_response: "Недопустимый параметр ответа Turnstile."
+      bad_request: "Запрос Turnstile был отклонён из-за неверного формата."
+      timeout_or_duplicate: "Токен Turnstile уже был использован или истёк."
+      internal_error: "Произошла внутренняя ошибка Turnstile при проверке ответа. Пожалуйста, попробуйте ещё раз."

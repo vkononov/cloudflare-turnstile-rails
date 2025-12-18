@@ -1,0 +1,11 @@
+en:
+  cloudflare_turnstile:
+    errors:
+      default: "We could not verify that you're human. Please try again."
+      missing_input_secret: "Turnstile secret key missing."
+      invalid_input_secret: "Turnstile secret parameter was invalid, did not exist, or is a testing secret key with a non-testing response."
+      missing_input_response: "Turnstile response parameter was not passed."
+      invalid_input_response: "Turnstile response parameter is invalid."
+      bad_request: "Turnstile request was rejected because it was malformed."
+      timeout_or_duplicate: "Turnstile token has already been used or expired."
+      internal_error: "Turnstile internal error occurred while validating the response. Please try again."

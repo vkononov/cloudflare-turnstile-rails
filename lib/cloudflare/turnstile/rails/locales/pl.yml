@@ -1,0 +1,11 @@
+pl:
+  cloudflare_turnstile:
+    errors:
+      default: "Nie udało się zweryfikować, że jesteś człowiekiem. Spróbuj ponownie."
+      missing_input_secret: "Brak klucza tajnego Turnstile."
+      invalid_input_secret: "Parametr tajny Turnstile był nieprawidłowy, nie istniał lub jest kluczem testowym z odpowiedzią nietestową."
+      missing_input_response: "Nie podano parametru odpowiedzi Turnstile."
+      invalid_input_response: "Parametr odpowiedzi Turnstile jest nieprawidłowy."
+      bad_request: "Żądanie Turnstile zostało odrzucone, ponieważ było nieprawidłowo sformułowane."
+      timeout_or_duplicate: "Token Turnstile został już użyty lub wygasł."
+      internal_error: "Wystąpił wewnętrzny błąd Turnstile podczas weryfikacji odpowiedzi. Spróbuj ponownie."

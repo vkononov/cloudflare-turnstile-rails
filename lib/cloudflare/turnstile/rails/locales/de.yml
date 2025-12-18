@@ -1,0 +1,11 @@
+de:
+  cloudflare_turnstile:
+    errors:
+      default: "Wir konnten nicht bestätigen, dass Sie ein Mensch sind. Bitte versuchen Sie es erneut."
+      missing_input_secret: "Turnstile-Geheimschlüssel fehlt."
+      invalid_input_secret: "Der Turnstile-Geheimparameter war ungültig, existierte nicht oder ist ein Test-Geheimschlüssel mit einer Nicht-Test-Antwort."
+      missing_input_response: "Der Turnstile-Antwortparameter wurde nicht übergeben."
+      invalid_input_response: "Der Turnstile-Antwortparameter ist ungültig."
+      bad_request: "Die Turnstile-Anfrage wurde abgelehnt, da sie fehlerhaft war."
+      timeout_or_duplicate: "Das Turnstile-Token wurde bereits verwendet oder ist abgelaufen."
+      internal_error: "Bei der Turnstile-Validierung ist ein interner Fehler aufgetreten. Bitte versuchen Sie es erneut."
