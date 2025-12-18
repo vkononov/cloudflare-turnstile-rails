@@ -49,7 +49,7 @@ module Cloudflare
             result = verify_turnstile(model: @model)
 
             assert_equal fake, result
-            assert_equal [[:base, ErrorMessage::DEFAULT]], @model.errors.added
+            assert_equal [[:base, ErrorMessage.default]], @model.errors.added
           end
         end
 
@@ -79,7 +79,7 @@ module Cloudflare
 
         def test_verification_failure_adds_default_error
           code = ErrorCode::TIMEOUT_OR_DUPLICATE
-          message = ErrorMessage::DEFAULT
+          message = ErrorMessage.default
 
           fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [code]})
           Verification.stub(:verify, fake) do

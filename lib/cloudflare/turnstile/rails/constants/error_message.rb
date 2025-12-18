@@ -4,21 +4,49 @@ module Cloudflare
   module Turnstile
     module Rails
       module ErrorMessage
-        MAP = {
-          ErrorCode::TIMEOUT_OR_DUPLICATE => 'Turnstile token has already been used or expired.'.freeze,
-          ErrorCode::INVALID_INPUT_RESPONSE => 'Turnstile response parameter is invalid.'.freeze,
-          ErrorCode::MISSING_INPUT_RESPONSE => 'Turnstile response parameter was not passed.'.freeze,
-          ErrorCode::BAD_REQUEST => 'Turnstile request was rejected because it was malformed.'.freeze,
-          ErrorCode::INTERNAL_ERROR => 'Turnstile Internal error occurred while validating the response. Please try again.'.freeze,
-          ErrorCode::MISSING_INPUT_SECRET => 'Turnstile secret key missing.'.freeze,
-          ErrorCode::INVALID_INPUT_SECRET => 'Turnstile secret parameter was invalid, did not exist, or is a testing secret key with a non-testing response.'.freeze
-        }.freeze
+        # I18n namespace for all error message translations
+        SCOPE = 'cloudflare_turnstile.errors'.freeze
 
-        DEFAULT = "We could not verify that you're human. Please try again.".freeze
+        # Fallback message used when no translation exists for an error code.
+        # This can happen if Cloudflare introduces a new error code that we
+        # haven't added to our locale files yet. Rails I18n fallbacks are
+        # respected if configured (config.i18n.fallbacks = true).
+        FALLBACK = "We could not verify that you're human. Please try again.".freeze
 
         def self.for(code)
-          base = MAP.fetch(code, DEFAULT)
-          "#{base} (#{code})"
+          "#{translate(key_for(code))} (#{code})"
+        end
+
+        def self.default
+          translate(:default)
+        end
+
+        # Backwards compatibility: ErrorMessage::DEFAULT still works (deprecated)
+        def self.const_missing(name)
+          if name == :DEFAULT
+            warn '[DEPRECATION] ErrorMessage::DEFAULT is deprecated. Use ErrorMessage.default instead.'
+            return default
+          end
+
+          super
+        end
+
+        # Converts Cloudflare error codes to i18n keys
+        # e.g., 'timeout-or-duplicate' → :timeout_or_duplicate
+        private_class_method def self.key_for(code)
+          return :default if code.nil? || code.to_s.empty?
+
+          code.to_s.tr('-', '_').to_sym
+        end
+
+        # Looks up translation for the given key in the current locale.
+        #
+        # Fallback behavior depends on the app's Rails configuration:
+        # - With `config.i18n.fallbacks = true`: tries current locale, then
+        #   fallback chain (e.g., :pt → :sp), then FALLBACK constant
+        # - Without fallbacks (default): tries current locale, then FALLBACK
+        private_class_method def self.translate(key)
+          I18n.t(key, scope: SCOPE, default: FALLBACK)
         end
       end
     end

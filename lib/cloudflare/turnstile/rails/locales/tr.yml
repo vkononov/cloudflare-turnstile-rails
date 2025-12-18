@@ -1,0 +1,11 @@
+tr:
+  cloudflare_turnstile:
+    errors:
+      default: "İnsan olduğunuzu doğrulayamadık. Lütfen tekrar deneyin."
+      missing_input_secret: "Turnstile gizli anahtarı eksik."
+      invalid_input_secret: "Turnstile gizli parametresi geçersizdi, mevcut değildi veya test anahtarı test dışı bir yanıtla kullanıldı."
+      missing_input_response: "Turnstile yanıt parametresi sağlanmadı."
+      invalid_input_response: "Turnstile yanıt parametresi geçersiz."
+      bad_request: "Turnstile isteği hatalı biçimlendirildiği için reddedildi."
+      timeout_or_duplicate: "Turnstile jetonu zaten kullanılmış veya süresi dolmuş."
+      internal_error: "Yanıt doğrulanırken Turnstile dahili hatası oluştu. Lütfen tekrar deneyin."

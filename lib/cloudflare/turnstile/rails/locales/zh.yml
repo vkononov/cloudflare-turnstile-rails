@@ -1,0 +1,11 @@
+zh:
+  cloudflare_turnstile:
+    errors:
+      default: "我们无法验证您是人类。请重试。"
+      missing_input_secret: "缺少 Turnstile 密钥。"
+      invalid_input_secret: "Turnstile 密钥参数无效、不存在，或者是测试密钥却使用了非测试响应。"
+      missing_input_response: "未提供 Turnstile 响应参数。"
+      invalid_input_response: "Turnstile 响应参数无效。"
+      bad_request: "Turnstile 请求因格式错误而被拒绝。"
+      timeout_or_duplicate: "Turnstile 令牌已被使用或已过期。"
+      internal_error: "验证响应时发生 Turnstile 内部错误。请重试。"

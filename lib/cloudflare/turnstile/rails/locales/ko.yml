@@ -1,0 +1,11 @@
+ko:
+  cloudflare_turnstile:
+    errors:
+      default: "사용자가 사람인지 확인할 수 없습니다. 다시 시도해 주세요."
+      missing_input_secret: "Turnstile 비밀 키가 없습니다."
+      invalid_input_secret: "Turnstile 비밀 매개변수가 유효하지 않거나, 존재하지 않거나, 테스트 키로 비테스트 응답을 사용했습니다."
+      missing_input_response: "Turnstile 응답 매개변수가 제공되지 않았습니다."
+      invalid_input_response: "Turnstile 응답 매개변수가 유효하지 않습니다."
+      bad_request: "Turnstile 요청이 잘못된 형식으로 인해 거부되었습니다."
+      timeout_or_duplicate: "Turnstile 토큰이 이미 사용되었거나 만료되었습니다."
+      internal_error: "응답 검증 중 Turnstile 내부 오류가 발생했습니다. 다시 시도해 주세요."

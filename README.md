@@ -30,6 +30,11 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   - [CSP Nonce Support](#csp-nonce-support)
   - [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
   - [Turbolinks Support](#turbolinks-support)
+- [Internationalization (I18n)](#internationalization-i18n)
+  - [Overriding Translations](#overriding-translations)
+  - [Locale Fallbacks](#locale-fallbacks)
+  - [Adding New Languages](#adding-new-languages)
+  - [Available Translation Keys](#available-translation-keys)
 - [Automated Testing of Your Integration](#automated-testing-of-your-integration)
 - [Upgrade Guide](#upgrade-guide)
 - [Troubleshooting](#troubleshooting)
@@ -183,6 +188,67 @@ templates / shared / cloudflare_turbolinks_ajax_cache.js
 ```
 
 into your application's JavaScript entrypoint (for example `app/javascript/packs/application.js`). This script listens for Rails UJS `ajax:complete` events that return HTML, caches the response as a Turbolinks snapshot, and then restores it via `Turbolinks.visit`, ensuring forms with validation errors are re‑rendered seamlessly.
+
+## Internationalization (I18n)
+
+Error messages are fully internationalized using Rails I18n. See [all languages](lib/cloudflare/turnstile/rails/locales) bundled with the gem.
+
+### Overriding Translations
+
+To customize error messages, add your own translations in your application's locale files:
+
+```yaml
+# config/locales/cloudflare_turnstile/en.yml
+en:
+  cloudflare_turnstile:
+    errors:
+      default: "Verification failed. Please try again."
+      timeout_or_duplicate: "Session expired. Please try again."
+```
+
+Your application's translations take precedence over the gem's defaults.
+
+### Locale Fallbacks
+
+This gem respects Rails' built-in I18n fallback configuration. When `config.i18n.fallbacks = true`, Rails will try fallback locales (including `default_locale`) before using the gem's default message.
+
+For example, with fallbacks enabled and a chain of `:pt → :es`, if a Portuguese translation is missing, Rails will automatically try Spanish before falling back to the gem's default message.
+
+> **Note:** If you use regional locales (e.g., `:pt-BR`, `:zh-CN`), you should enable fallbacks. Without `config.i18n.fallbacks = true`, a locale like `:pt-BR` will **not** automatically fall back to `:pt`, and users will see the generic fallback message instead of the Portuguese translation.
+
+### Adding New Languages
+
+To add a language not bundled with the gem (e.g. Yoruba), create a new locale file:
+
+```yaml
+# config/locales/cloudflare_turnstile/yo.yml
+yo:
+  cloudflare_turnstile:
+    errors:
+      default: "A ko le jẹrisi pe o jẹ ènìyàn. Jọwọ gbìyànjú lẹ́ẹ̀kansi."
+      missing_input_secret: "Kọkọrọ̀ ìkọkọ Turnstile kò sí."
+      invalid_input_secret: "Kọkọrọ̀ ìkọkọ Turnstile kò bófin mu, kò sí, tàbí pé ó jẹ́ akọsọ ìdánwò pẹ̀lú ìdáhùn tí kì í ṣe ìdánwò."
+      missing_input_response: "A kò fi ìdáhùn Turnstile ránṣẹ́."
+      invalid_input_response: "Ìbáṣepọ̀ ìdáhùn Turnstile kò bófin mu."
+      bad_request: "Ìbéèrè Turnstile kọjá àṣìṣe nítorí pé a kọ ọ̀ ní ọna tí kò tó."
+      timeout_or_duplicate: "Àmì-ẹ̀rí Turnstile ti lo tẹlẹ̀ tàbí pé ó ti parí."
+      internal_error: "Àṣìṣe inú Turnstile ṣẹlẹ̀ nígbà ìmúdájú ìdáhùn. Jọwọ gbìyànjú lẹ́ẹ̀kansi."
+```
+
+### Available Translation Keys
+
+| Key                      | Cloudflare Error Code      | Description                         |
+|--------------------------|----------------------------|-------------------------------------|
+| `default`                | —                          | Fallback message for unknown errors |
+| `missing_input_secret`   | `missing-input-secret`     | Secret key not configured           |
+| `invalid_input_secret`   | `invalid-input-secret`     | Invalid or missing secret key       |
+| `missing_input_response` | `missing-input-response`   | Response parameter not provided     |
+| `invalid_input_response` | `invalid-input-response`   | Invalid response parameter          |
+| `bad_request`            | `bad-request`              | Malformed request                   |
+| `timeout_or_duplicate`   | `timeout-or-duplicate`     | Token expired or already used       |
+| `internal_error`         | `internal-error`           | Cloudflare internal error           |
+
+For more details on these error codes, see Cloudflare's [error codes reference](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#error-codes-reference).
 
 ## Automated Testing of Your Integration
 

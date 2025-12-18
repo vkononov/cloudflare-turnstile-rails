@@ -1,0 +1,11 @@
+pt:
+  cloudflare_turnstile:
+    errors:
+      default: "Não foi possível verificar que você é humano. Por favor, tente novamente."
+      missing_input_secret: "A chave secreta do Turnstile está ausente."
+      invalid_input_secret: "O parâmetro secreto do Turnstile era inválido, não existia, ou é uma chave de teste com uma resposta que não é de teste."
+      missing_input_response: "O parâmetro de resposta do Turnstile não foi fornecido."
+      invalid_input_response: "O parâmetro de resposta do Turnstile é inválido."
+      bad_request: "A solicitação do Turnstile foi rejeitada porque estava malformada."
+      timeout_or_duplicate: "O token do Turnstile já foi usado ou expirou."
+      internal_error: "Ocorreu um erro interno do Turnstile ao validar a resposta. Por favor, tente novamente."

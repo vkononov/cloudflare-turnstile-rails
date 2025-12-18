@@ -65,7 +65,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.default
     wait_for_turnstile_inputs(1)
   end
 
@@ -75,7 +75,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.default
     wait_for_turnstile_inputs(1)
   end
 
@@ -85,7 +85,7 @@ class BooksTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
     click_on 'Create Book'
 
-    assert_text Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT
+    assert_text Cloudflare::Turnstile::Rails::ErrorMessage.default
     wait_for_turnstile_inputs(1)
   end
 

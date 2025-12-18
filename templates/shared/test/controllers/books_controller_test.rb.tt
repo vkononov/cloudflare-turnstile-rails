@@ -53,7 +53,7 @@ class BooksControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_template :new
-    assert_equal Cloudflare::Turnstile::Rails::ErrorMessage::DEFAULT, assigns(:book).errors[:base].first
+    assert_equal Cloudflare::Turnstile::Rails::ErrorMessage.default, assigns(:book).errors[:base].first
   end
 
   test 'POST /books (AJAX) with invalid model returns JS' do
