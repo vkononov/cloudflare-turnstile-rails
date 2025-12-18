@@ -25,6 +25,8 @@ module Cloudflare
           I18n.default_locale = @original_default_locale
           I18n.available_locales = @original_available_locales
           # Reset fallbacks to prevent test pollution
+          # Clear defaults first, then restore the fallbacks object
+          I18n.fallbacks.defaults = [] if I18n.respond_to?(:fallbacks) && I18n.fallbacks.respond_to?(:defaults=)
           I18n.fallbacks = @original_fallbacks if @original_fallbacks
         end
 
@@ -84,13 +86,15 @@ module Cloudflare
 
         def test_unsupported_locale_falls_back_to_fallback
           # Add Yoruba to available locales (but we have no translations for it)
-          # Without Rails fallbacks configured, it should use FALLBACK
+          # Without Rails fallbacks configured for :yo, it should use FALLBACK
           I18n.available_locales = %i[en de yo]
           I18n.locale = :yo
+          # Explicitly clear any fallbacks for :yo (in case Fallbacks module was included by another test)
+          I18n.fallbacks = I18n::Locale::Fallbacks.new(yo: []) if I18n.respond_to?(:fallbacks)
 
           result = ErrorMessage.send(:translate, :default)
 
-          # Falls back to FALLBACK constant (Rails fallbacks not configured in test)
+          # Falls back to FALLBACK constant (no fallback chain configured for :yo)
           assert_equal ErrorMessage::FALLBACK, result
         end
 
@@ -98,10 +102,12 @@ module Cloudflare
           # Add Yoruba to available locales (but we have no translations for it)
           I18n.available_locales = %i[en de yo]
           I18n.locale = :yo
+          # Explicitly clear any fallbacks for :yo
+          I18n.fallbacks = I18n::Locale::Fallbacks.new(yo: []) if I18n.respond_to?(:fallbacks)
 
           result = ErrorMessage.for(ErrorCode::TIMEOUT_OR_DUPLICATE)
 
-          # Falls back to FALLBACK (Rails fallbacks not configured in test)
+          # Falls back to FALLBACK (no fallback chain configured for :yo)
           assert result.start_with?(ErrorMessage::FALLBACK)
           assert result.end_with?("(#{ErrorCode::TIMEOUT_OR_DUPLICATE})")
         end
