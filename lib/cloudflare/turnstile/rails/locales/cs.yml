@@ -1,0 +1,11 @@
+cs:
+  cloudflare_turnstile:
+    errors:
+      default: "Nebylo možné ověřit, že jste člověk. Prosím zkuste to znovu."
+      missing_input_secret: "Chybí tajný klíč Turnstile."
+      invalid_input_secret: "Parametr tajného klíče Turnstile je neplatný, neexistuje nebo se jedná o testovací tajný klíč s netestovací odpovědí."
+      missing_input_response: "Chybí parametr odpovědi Turnstile."
+      invalid_input_response: "Parametr odpovědi Turnstile je neplatný."
+      bad_request: "Požadavek Turnstile byl odmítnut, protože nebyl správně sestaven."
+      timeout_or_duplicate: "Token Turnstile již byl použit nebo vypršel."
+      internal_error: "Při ověřování odpovědi došlo k interní chybě Turnstile. Zkuste to prosím znovu."
