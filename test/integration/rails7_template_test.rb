@@ -37,6 +37,7 @@ class Rails7TemplateTest < Minitest::Test
         --skip-action-mailer --skip-action-mailbox --skip-action-text
         --skip-active-record --skip-active-job --skip-active-storage
         --skip-action-cable --skip-jbuilder --skip-bootsnap --skip-api
+        --skip-hotwire --skip-bundle
       ] + ['-m', TEMPLATE]
 
       # Run rails new with bundle exec to ensure correct Rails version is used
@@ -46,6 +47,7 @@ class Rails7TemplateTest < Minitest::Test
       Bundler.with_unbundled_env do
         ENV['RUBYOPT'] = '-r logger'
 
+        assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
     end

@@ -8,6 +8,10 @@ append_to_file 'Gemfile', <<~RUBY
   gem 'minitest-retry', require: false
   gem 'rails-controller-testing'
 
+  #{if Rails::VERSION::STRING >= '7.0.0'
+      "# Add turbo-rails for turbo_stream support (needed when using --skip-hotwire)\ngem 'turbo-rails'"
+    end}#{'  '}
+
   if RUBY_VERSION >= '3.0.0'
     # Include gems that are no longer loaded from standard libraries
     gem 'mutex_m'
