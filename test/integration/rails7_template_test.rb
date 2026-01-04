@@ -30,12 +30,10 @@ class Rails7TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails7_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-    # Capture exact Rails version before unbundling to avoid gem conflicts
-    rails_gem_version = Gem.loaded_specs['railties'].version.to_s
+    # Capture gemfile path before unbundling to use with bundle exec
+    gemfile_path = ENV.fetch('BUNDLE_GEMFILE', nil)
 
     Bundler.with_unbundled_env do
-      gem 'railties', "= #{rails_gem_version}"
-      rails_cmd = Gem.bin_path('railties', 'rails')
       ENV['RUBYOPT'] = '-r logger'
       Dir.chdir(@tmpdir) do
         args = %w[
@@ -46,7 +44,10 @@ class Rails7TemplateTest < Minitest::Test
           --skip-action-cable --skip-jbuilder --skip-bootsnap --skip-api
         ] + ['-m', TEMPLATE]
 
-        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
+        # Use bundle exec with appraisal gemfile to ensure correct Rails version
+        rails_new_env = gemfile_path ? { 'BUNDLE_GEMFILE' => gemfile_path } : {}
+        assert system(rails_new_env, 'bundle', 'exec', 'rails', *args),
+               "❌ `rails new` failed: bundle exec rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end

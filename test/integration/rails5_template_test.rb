@@ -28,12 +28,11 @@ class Rails5TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-    # Capture exact Rails version before unbundling to avoid gem conflicts
-    rails_gem_version = Gem.loaded_specs['railties'].version.to_s
+    # Capture gemfile path before unbundling to use with bundle exec
+    gemfile_path = ENV.fetch('BUNDLE_GEMFILE', nil)
+    rails_version = Rails::VERSION::STRING
 
     Bundler.with_unbundled_env do
-      gem 'railties', "= #{rails_gem_version}"
-      rails_cmd = Gem.bin_path('railties', 'rails')
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
       Dir.chdir(@tmpdir) do
         args = %w[
@@ -44,12 +43,15 @@ class Rails5TemplateTest < Minitest::Test
           --skip-bootsnap --skip-api
         ] + ['-m', TEMPLATE]
 
-        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
+        # Use bundle exec with appraisal gemfile to ensure correct Rails version
+        rails_new_env = gemfile_path ? { 'BUNDLE_GEMFILE' => gemfile_path } : {}
+        assert system(rails_new_env, 'bundle', 'exec', 'rails', *args),
+               "❌ `rails new` failed: bundle exec rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
 
         assert system('bin/rails', 'test'), '❌ tests failed in generated app'
 
-        if Gem::Version.new(Rails::VERSION::STRING) < Gem::Version.new('5.2.0')
+        if Gem::Version.new(rails_version) < Gem::Version.new('5.2.0')
           assert system('bin/rails', 'test:system'), '❌ system tests failed in generated app'
         end
       end
