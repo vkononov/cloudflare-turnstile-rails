@@ -47,6 +47,7 @@ class Rails8TemplateTest < Minitest::Test
       # Use unbundled env only for the generated app's commands
       Bundler.with_unbundled_env do
         ENV['RUBYOPT'] = '-r logger'
+
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
