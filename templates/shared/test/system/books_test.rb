@@ -92,6 +92,8 @@ class BooksTest < ApplicationSystemTestCase
   test 'turnstile renders two plugins when there are two forms' do
     skip "Not supported in Github actions for Ruby v#{RUBY_VERSION}" if RUBY_VERSION < '2.7.0' && ENV['CI']
 
+    puts "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
     visit new2_books_url
     wait_for_turnstile_inputs(2)
     all('input[type="submit"]').each { |input| input.click and wait_for_turnstile_inputs(2) }

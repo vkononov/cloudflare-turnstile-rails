@@ -1,3 +1,4 @@
+require 'test_helper'
 require 'bundler'
 require 'fileutils'
 
@@ -37,7 +38,6 @@ class Rails8TemplateTest < Minitest::Test
         --skip-dev-gems --skip-thruster --skip-rubocop --skip-brakeman
         --skip-ci --skip-kamal --skip-solid --skip-devcontainer
         --skip-api --skip-decrypted-diffs
-        --skip-hotwire --skip-bundle
       ] + ['-m', TEMPLATE]
 
       # Run rails new with bundle exec to ensure correct Rails version is used
@@ -47,7 +47,6 @@ class Rails8TemplateTest < Minitest::Test
       Bundler.with_unbundled_env do
         ENV['RUBYOPT'] = '-r logger'
 
-        assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
     end

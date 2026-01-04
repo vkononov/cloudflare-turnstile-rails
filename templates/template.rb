@@ -68,7 +68,7 @@ end
 
 # 4) configure minitest-retry in test_helper.rb
 gsub_file 'test/test_helper.rb', %r{require ['"]rails/test_help['"]\n},
-          "\\0require 'minitest/retry'\nMinitest::Retry.use!\n"
+          "\\0require 'minitest/retry'\nMinitest::Retry.use! if ENV['CI'].present?\n"
 
 # 5) turbo AJAX-cache helper
 packer_js = 'app/javascript/packs/application.js'
