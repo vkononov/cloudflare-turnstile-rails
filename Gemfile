@@ -25,7 +25,6 @@ group :test do
 
   gem 'benchmark' if RUBY_VERSION >= '3.5.0'
 
-  # resolves `check_version_conflict': can't activate erb-4.0.4, already activated erb-6.0.1 (Gem::LoadError)
   if RUBY_VERSION >= '4.0.0'
     gem 'erb', '~> 6'
   elsif RUBY_VERSION >= '3.1.0'
