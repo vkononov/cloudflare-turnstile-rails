@@ -34,6 +34,9 @@ append_to_file 'Gemfile', <<~RUBY
   #{if Rails::VERSION::STRING.start_with?('5.2.')
       "# Required for Rails 5.2, unsupported in older versions, and deprecated in newer versions\ngem 'webdrivers'"
     end}#{'  '}
+  #{if (Rails::VERSION::STRING.start_with?('7.0') || Rails::VERSION::STRING.start_with?('7.1')) && RUBY_VERSION >= '3.4.0'
+      "# Rails 7.0/7.1 is incompatible with minitest 6.0+ (comes with Ruby 3.4+)\ngem 'minitest', '< 6.0'"
+    end}#{'  '}
 
   # test against the local checkout of cloudflare-turnstile-rails
   gem 'cloudflare-turnstile-rails', path: "#{File.expand_path('..', __dir__)}"
@@ -80,3 +83,7 @@ end
 
 # 6) Remove any existing chromedriver-helper gem line from Gemfile (only relevant for Rails 5.x)
 gsub_file 'Gemfile', /^\s*gem ['"]chromedriver-helper['"].*\n/, ''
+
+# 7) Note: importmap and turbo installation will be handled after bundle install
+# Rails 7.0/7.1 includes these gems by default, so they should be in the Gemfile
+# The install tasks will be run in the test after bundle install completes
