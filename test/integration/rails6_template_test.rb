@@ -34,7 +34,7 @@ class Rails6TemplateTest < Minitest::Test
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
       Dir.chdir(@tmpdir) do
         args = %w[
-          new . --quiet
+          new .
           --skip-git --skip-keeps
           --skip-action-mailer --skip-action-mailbox --skip-action-text
           --skip-active-record --skip-active-job --skip-active-storage
