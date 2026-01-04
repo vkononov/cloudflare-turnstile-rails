@@ -9,10 +9,6 @@ class BooksController < ApplicationController
   end
 
   def create
-    puts "REQUEST FORMAT: #{request.format}"
-    puts "CONTENT TYPE: #{request.content_type}"
-    puts "ACCEPT: #{request.headers['Accept']}"
-
     @book = Book.new(book_params)
 
     respond_to do |format|

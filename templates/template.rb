@@ -8,10 +8,6 @@ append_to_file 'Gemfile', <<~RUBY
   gem 'minitest-retry', require: false
   gem 'rails-controller-testing'
 
-  #{if Rails::VERSION::STRING >= '7.0.0'
-      "# Add turbo-rails for turbo_stream support (needed when using --skip-hotwire)\ngem 'turbo-rails'"
-    end}#{'  '}
-
   if RUBY_VERSION >= '3.0.0'
     # Include gems that are no longer loaded from standard libraries
     gem 'mutex_m'
@@ -23,8 +19,8 @@ append_to_file 'Gemfile', <<~RUBY
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
-  #{if Rails::VERSION::STRING < '7.2.0'
-      "# Minitest 6.x is incompatible with Rails < 7.2\ngem 'minitest', '< 6.0'"
+  #{if Rails::VERSION::STRING < '7.0.0'
+      "# Higher versions are unsupported in Rails < 7.0.0\n# gem 'minitest', '< 5.12'"
     end}#{'  '}
   #{if Rails::VERSION::STRING < '7.2.0'
       "# Higher versions cause 'uninitialized constant Rack::Handler (NameError)'\ngem 'rack', '< 3.0.0'"
@@ -68,7 +64,7 @@ end
 
 # 4) configure minitest-retry in test_helper.rb
 gsub_file 'test/test_helper.rb', %r{require ['"]rails/test_help['"]\n},
-          "\\0require 'minitest/retry'\nMinitest::Retry.use! if ENV['CI'].present?\n"
+          "\\0require 'minitest/retry'\nMinitest::Retry.use!\n"
 
 # 5) turbo AJAX-cache helper
 packer_js = 'app/javascript/packs/application.js'
