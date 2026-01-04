@@ -24,4 +24,7 @@ group :test do
   gem 'minitest-mock' if RUBY_VERSION >= '3.1.0'
 
   gem 'benchmark' if RUBY_VERSION >= '3.5.0'
+
+  # resolves `check_version_conflict': can't activate erb-4.0.4, already activated erb-6.0.1 (Gem::LoadError)
+  gem 'erb', '~> 4' if RUBY_VERSION >= '3.1.0'
 end
