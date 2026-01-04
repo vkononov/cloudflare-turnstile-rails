@@ -24,6 +24,12 @@ group :test do
   gem 'minitest-mock' if RUBY_VERSION >= '3.1.0'
 
   gem 'benchmark' if RUBY_VERSION >= '3.5.0'
+
+  if RUBY_VERSION >= '4.0.0'
+    gem 'erb', '~> 6'
+  elsif RUBY_VERSION >= '3.1.0'
+    gem 'erb', '~> 4'
+  end
 end
 
 # Cap nokogiri to older versions, as v1.19.0 current has unresolved incompatibility issues
