@@ -41,11 +41,12 @@ class Rails7TemplateTest < Minitest::Test
       ] + ['-m', TEMPLATE]
 
       # Run rails new with bundle exec to ensure correct Rails version is used
-      assert system('bundle', 'exec', 'rails', *args), "❌ `rails new` failed"
+      assert system('bundle', 'exec', 'rails', *args), '❌ `rails new` failed'
 
       # Use unbundled env for the generated app's commands
       Bundler.with_unbundled_env do
         ENV['RUBYOPT'] = '-r logger'
+
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
