@@ -29,7 +29,7 @@ class Rails7TemplateTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_system_tests_pass_in_rails7_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+  def test_system_tests_pass_in_rails7_generated_app # rubocop:disable Metrics/MethodLength
     # Capture gemfile path before unbundling to use with bundle exec
     gemfile_path = ENV.fetch('BUNDLE_GEMFILE', nil)
 
@@ -46,6 +46,7 @@ class Rails7TemplateTest < Minitest::Test
 
         # Use bundle exec with appraisal gemfile to ensure correct Rails version
         rails_new_env = gemfile_path ? { 'BUNDLE_GEMFILE' => gemfile_path } : {}
+
         assert system(rails_new_env, 'bundle', 'exec', 'rails', *args),
                "❌ `rails new` failed: bundle exec rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
