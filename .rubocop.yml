@@ -44,3 +44,6 @@ Style/EmptyElse:
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
 
+Style/IfUnlessModifier:
+  Exclude:
+    - Appraisals

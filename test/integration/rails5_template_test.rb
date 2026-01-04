@@ -27,10 +27,13 @@ class Rails5TemplateTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/MethodLength
-    rails_cmd = Gem.bin_path('railties', 'rails')
+  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
+    # Capture exact Rails version before unbundling to avoid gem conflicts
+    rails_gem_version = Gem.loaded_specs['railties'].version.to_s
 
     Bundler.with_unbundled_env do
+      gem 'railties', "= #{rails_gem_version}"
+      rails_cmd = Gem.bin_path('railties', 'rails')
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
       Dir.chdir(@tmpdir) do
         args = %w[
