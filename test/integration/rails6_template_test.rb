@@ -1,3 +1,4 @@
+require 'test_helper'
 require 'bundler'
 require 'fileutils'
 

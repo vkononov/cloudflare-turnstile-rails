@@ -1,4 +1,3 @@
-require 'rails_test_helper'
 require 'rails/generators'
 
 module CloudflareTurnstile
