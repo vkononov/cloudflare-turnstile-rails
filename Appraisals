@@ -41,7 +41,6 @@ end
 if RUBY_VERSION >= '2.7.0'
   appraise 'rails-7.0' do
     gem 'rails', '~> 7.0.0'
-    gem 'erb', '~> 4.0'
     if RUBY_VERSION >= '3.4.0'
       gem 'drb'
       gem 'mutex_m'
@@ -50,7 +49,6 @@ if RUBY_VERSION >= '2.7.0'
 
   appraise 'rails-7.1' do
     gem 'rails', '~> 7.1.0'
-    gem 'erb', '~> 4.0'
   end
 end
 
@@ -63,9 +61,11 @@ end
 if RUBY_VERSION >= '3.2.0'
   appraise 'rails-8.0' do
     gem 'rails', '~> 8.0.0'
+    gem 'erb', '~> 4'
   end
 
   appraise 'rails-8.1' do
     gem 'rails', '~> 8.1.0'
+    gem 'erb', '~> 4'
   end
 end

@@ -80,7 +80,3 @@ end
 
 # 6) Remove any existing chromedriver-helper gem line from Gemfile (only relevant for Rails 5.x)
 gsub_file 'Gemfile', /^\s*gem ['"]chromedriver-helper['"].*\n/, ''
-
-# 7) Note: importmap and turbo installation will be handled after bundle install
-# Rails 7.0/7.1 includes these gems by default, so they should be in the Gemfile
-# The install tasks will be run in the test after bundle install completes

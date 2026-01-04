@@ -25,6 +25,3 @@ group :test do
 
   gem 'benchmark' if RUBY_VERSION >= '3.5.0'
 end
-
-# Cap nokogiri to older versions, as v1.19.0 current has unresolved incompatibility issues
-gem 'nokogiri', '< 1.19.0'

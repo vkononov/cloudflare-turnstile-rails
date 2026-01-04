@@ -28,13 +28,13 @@ class Rails6TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails6_generated_app # rubocop:disable Metrics/MethodLength
-    rails_cmd = Gem.bin_path('railties', 'rails', Rails.gem_version)
+    rails_cmd = Gem.bin_path('railties', 'rails')
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
       Dir.chdir(@tmpdir) do
         args = %w[
-          new .
+          new . --quiet
           --skip-git --skip-keeps
           --skip-action-mailer --skip-action-mailbox --skip-action-text
           --skip-active-record --skip-active-job --skip-active-storage
