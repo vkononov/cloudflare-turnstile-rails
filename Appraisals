@@ -4,6 +4,9 @@ appraise 'rails-5.0' do
     gem 'base64'
     gem 'mutex_m'
   end
+  if RUBY_VERSION >= '4.0.0'
+    gem 'nokogiri', '~> 1.18.0'
+  end
 end
 
 appraise 'rails-5.1' do
@@ -12,6 +15,9 @@ appraise 'rails-5.1' do
     gem 'base64'
     gem 'mutex_m'
   end
+  if RUBY_VERSION >= '4.0.0'
+    gem 'nokogiri', '~> 1.18.0'
+  end
 end
 
 appraise 'rails-5.2' do
@@ -19,6 +25,9 @@ appraise 'rails-5.2' do
   if RUBY_VERSION >= '3.4.0'
     gem 'base64'
     gem 'mutex_m'
+  end
+  if RUBY_VERSION >= '4.0.0'
+    gem 'nokogiri', '~> 1.18.0'
   end
 end
 
@@ -63,7 +72,7 @@ if RUBY_VERSION >= '3.2.0'
     gem 'rails', '~> 8.0.0'
   end
 
-  appraise 'rails-8.0' do
+  appraise 'rails-8.1' do
     gem 'rails', '~> 8.1.0'
   end
 end
