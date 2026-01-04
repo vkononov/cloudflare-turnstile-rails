@@ -28,3 +28,4 @@ end
 
 # Cap nokogiri to older versions, as v1.19.0 current has unresolved incompatibility issues
 gem 'nokogiri', '< 1.19.0'
+gem 'erb', '~> 4'
