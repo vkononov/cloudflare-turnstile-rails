@@ -30,7 +30,7 @@ class Rails7TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails7_generated_app # rubocop:disable Metrics/MethodLength
-    rails_cmd = Gem.bin_path('railties', 'rails')
+    rails_cmd = Gem.bin_path('railties', 'rails', Rails.gem_version)
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger'
