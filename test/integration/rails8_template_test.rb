@@ -27,8 +27,7 @@ class Rails8TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails8_generated_app # rubocop:disable Metrics/MethodLength
-    # Capture gemfile path before unbundling to use with bundle exec
-    gemfile_path = ENV.fetch('BUNDLE_GEMFILE', nil)
+    rails_cmd = Gem.bin_path('railties', 'rails')
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger'
@@ -44,11 +43,7 @@ class Rails8TemplateTest < Minitest::Test
           --skip-api --skip-decrypted-diffs
         ] + ['-m', TEMPLATE]
 
-        # Use bundle exec with appraisal gemfile to ensure correct Rails version
-        rails_new_env = gemfile_path ? { 'BUNDLE_GEMFILE' => gemfile_path } : {}
-
-        assert system(rails_new_env, 'bundle', 'exec', 'rails', *args),
-               "❌ `rails new` failed: bundle exec rails #{args.join(' ')}"
+        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
