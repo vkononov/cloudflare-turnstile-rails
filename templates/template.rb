@@ -19,8 +19,8 @@ append_to_file 'Gemfile', <<~RUBY
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
-  #{if Rails::VERSION::STRING < '7.0.0'
-      "# Higher versions are unsupported in Rails < 7.0.0\n# gem 'minitest', '< 5.12'"
+  #{if Rails::VERSION::STRING < '7.2.0'
+      "# Minitest 6.x is incompatible with Rails < 7.2\ngem 'minitest', '< 6.0'"
     end}#{'  '}
   #{if Rails::VERSION::STRING < '7.2.0'
       "# Higher versions cause 'uninitialized constant Rack::Handler (NameError)'\ngem 'rack', '< 3.0.0'"
