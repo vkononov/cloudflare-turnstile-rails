@@ -27,23 +27,25 @@ class Rails8TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails8_generated_app # rubocop:disable Metrics/MethodLength
-    rails_cmd = Gem.bin_path('railties', 'rails')
+    Dir.chdir(@tmpdir) do
+      args = %w[
+        new . --quiet
+        --skip-git --skip-docker --skip-keeps
+        --skip-action-mailer --skip-action-mailbox --skip-action-text
+        --skip-active-record --skip-active-job --skip-active-storage
+        --skip-action-cable --skip-jbuilder --skip-bootsnap
+        --skip-dev-gems --skip-thruster --skip-rubocop --skip-brakeman
+        --skip-ci --skip-kamal --skip-solid --skip-devcontainer
+        --skip-api --skip-decrypted-diffs
+        --skip-hotwire --skip-bundle
+      ] + ['-m', TEMPLATE]
 
-    Bundler.with_unbundled_env do
-      ENV['RUBYOPT'] = '-r logger'
-      Dir.chdir(@tmpdir) do
-        args = %w[
-          new . --quiet
-          --skip-git --skip-docker --skip-keeps
-          --skip-action-mailer --skip-action-mailbox --skip-action-text
-          --skip-active-record --skip-active-job --skip-active-storage
-          --skip-action-cable --skip-jbuilder --skip-bootsnap
-          --skip-dev-gems --skip-thruster --skip-rubocop --skip-brakeman
-          --skip-ci --skip-kamal --skip-solid --skip-devcontainer
-          --skip-api --skip-decrypted-diffs
-        ] + ['-m', TEMPLATE]
+      # Run rails new with bundle exec to ensure correct Rails version is used
+      assert system('bundle', 'exec', 'rails', *args), "❌ `rails new` failed"
 
-        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
+      # Use unbundled env for the generated app's commands
+      Bundler.with_unbundled_env do
+        ENV['RUBYOPT'] = '-r logger'
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'
       end
