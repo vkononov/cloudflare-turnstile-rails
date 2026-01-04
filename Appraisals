@@ -67,3 +67,6 @@ if RUBY_VERSION >= '3.2.0'
     gem 'rails', '~> 8.1.0'
   end
 end
+
+# Cap nokogiri to older versions, as v1.19.0 current has unresolved incompatibility issues
+gem 'nokogiri', '< 1.19.0'

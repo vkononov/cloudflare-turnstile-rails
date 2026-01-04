@@ -19,9 +19,6 @@ append_to_file 'Gemfile', <<~RUBY
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
-  # Cap nokogiri to older versions, as v1.19.0 current has unresolved incompatibility issues
-  gem 'nokogiri', '< 1.19.0'
-
   #{if Rails::VERSION::STRING < '7.0.0'
       "# Higher versions are unsupported in Rails < 7.0.0\n# gem 'minitest', '< 5.12'"
     end}#{'  '}
