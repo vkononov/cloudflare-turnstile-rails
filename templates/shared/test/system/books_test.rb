@@ -139,7 +139,68 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
                  'Cloudflare script nonce should match helper script nonce'
   end
 
+  test 'turbolinks AJAX cache updates page when server returns HTML for remote form' do # rubocop:disable Metrics/BlockLength
+    # This test is only relevant for Rails 6 with Turbolinks (not Rails 7+ with Turbo)
+    skip 'Turbolinks not available' unless turbolinks_available?
+
+    visit new_book_url
+    wait_for_turnstile_inputs(1, message: 'after page load')
+
+    # Verify Turbolinks AJAX cache script is loaded and listening
+    listener_registered = evaluate_script(<<~JS)
+      (function() {
+        // The script should have set up an ajax:complete listener
+        // We can verify by checking if Turbolinks.Snapshot exists (required by our script)
+        return typeof Turbolinks !== 'undefined' &&
+               typeof Turbolinks.Snapshot !== 'undefined' &&
+               typeof Turbolinks.Snapshot.wrap === 'function';
+      })()
+    JS
+    assert listener_registered, 'Turbolinks.Snapshot.wrap should be available for AJAX cache'
+
+    # Simulate the AJAX cache mechanism by dispatching an ajax:complete event with HTML
+    # This tests the cloudflare_turbolinks_ajax_cache.js event handler
+    page_updated = evaluate_script(<<~JS)
+      (function() {
+        var testHtml = '<html><head></head><body>' +
+          '<div class="test-marker">AJAX Cache Test Marker</div>' +
+          '<form id="book_form">' +
+          '<ul class="error_explanation"><li>Title cannot be blank</li></ul>' +
+          '<div class="cf-turnstile" data-sitekey="test"></div>' +
+          '</form></body></html>';
+
+        var mockXhr = {
+          getResponseHeader: function(name) {
+            return name === 'Content-Type' ? 'text/html; charset=utf-8' : null;
+          },
+          response: testHtml
+        };
+
+        var event = new CustomEvent('ajax:complete', {
+          bubbles: true,
+          detail: [mockXhr]
+        });
+
+        document.dispatchEvent(event);
+
+        // Give Turbolinks a moment to process
+        return true;
+      })()
+    JS
+
+    assert page_updated, 'AJAX complete event should be dispatched'
+
+    # Verify the page was updated via Turbolinks restore
+    assert_selector '.test-marker', text: 'AJAX Cache Test Marker', wait: 2
+  end
+
   private
+
+  def turbolinks_available?
+    evaluate_script('typeof Turbolinks !== "undefined"')
+  rescue StandardError
+    false
+  end
 
   def turnstile_selector
     "div.cf-turnstile input[name='cf-turnstile-response'][value*='DUMMY']"
