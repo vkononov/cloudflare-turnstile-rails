@@ -1,6 +1,6 @@
 require 'application_system_test_case'
 
-class BooksTest < ApplicationSystemTestCase
+class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLength
   setup do
     Cloudflare::Turnstile::Rails.configure do |config|
       config.site_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
