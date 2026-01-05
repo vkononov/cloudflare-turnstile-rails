@@ -62,11 +62,11 @@ module Cloudflare
           assert_match(/<script[^>]+nonce="NONCE123"/, html)
         end
 
-        test 'nonce attribute is absent when content_security_policy_nonce is not defined' do
-          # Ensure content_security_policy_nonce is not defined in this context
-          # (ActionView::TestCase does not define it by default)
-          refute defined?(content_security_policy_nonce),
-                 'content_security_policy_nonce should not be defined for this test'
+        test 'nonce attribute is absent when content_security_policy_nonce returns nil' do
+          # Override to return nil (simulates CSP disabled or no nonce configured)
+          def content_security_policy_nonce
+            nil
+          end
 
           html = cloudflare_turnstile_tag
 
