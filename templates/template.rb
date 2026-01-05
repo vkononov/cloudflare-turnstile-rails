@@ -53,6 +53,7 @@ RUBY
   app/views/books/new.html.erb
   app/views/books/new2.html.erb
   config/initializers/cloudflare_turnstile.rb
+  config/initializers/content_security_policy.rb
   config/routes.rb
   test/application_system_test_case.rb
   test/controllers/books_controller_test.rb.tt

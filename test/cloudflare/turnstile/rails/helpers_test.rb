@@ -62,6 +62,18 @@ module Cloudflare
           assert_match(/<script[^>]+nonce="NONCE123"/, html)
         end
 
+        test 'nonce attribute is absent when content_security_policy_nonce returns nil' do
+          # Override to return nil (simulates CSP disabled or no nonce configured)
+          def content_security_policy_nonce
+            nil
+          end
+
+          html = cloudflare_turnstile_tag
+
+          # The script tag should NOT have a nonce attribute
+          refute_match(/nonce=/, html)
+        end
+
         test 'passed-in site_key overrides the configured default' do
           html = cloudflare_turnstile_tag(site_key: 'OVERRIDE')
 

@@ -110,6 +110,35 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     assert_selector "div.cf-turnstile input[name='cf-turnstile-response']", count: 1, visible: :all
   end
 
+  test 'nonce is propagated from helper script to dynamically loaded Cloudflare script' do
+    visit new_book_url
+    wait_for_turnstile_inputs(1)
+
+    # Get the nonce from the helper script
+    helper_nonce = evaluate_script(<<~JS)
+      (function() {
+        var helper = document.querySelector('script[src*="cloudflare_turnstile_helper"]');
+        return helper ? helper.nonce : null;
+      })()
+    JS
+
+    # Get the nonce from the dynamically loaded Cloudflare script
+    cloudflare_nonce = evaluate_script(<<~JS)
+      (function() {
+        var cf = document.querySelector('script[src*="challenges.cloudflare.com"]');
+        return cf ? cf.nonce : null;
+      })()
+    JS
+
+    # Both scripts should have nonces (CSP is enabled in test app)
+    assert_not_nil helper_nonce, 'Helper script should have a nonce attribute'
+    assert_not_nil cloudflare_nonce, 'Cloudflare script should have a nonce attribute'
+
+    # The nonces should match (JS propagates nonce from helper to Cloudflare script)
+    assert_equal helper_nonce, cloudflare_nonce,
+                 'Cloudflare script nonce should match helper script nonce'
+  end
+
   private
 
   def turnstile_selector
