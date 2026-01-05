@@ -19,6 +19,9 @@ append_to_file 'Gemfile', <<~RUBY
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
+  # Rails currently has an incompatibility with minitest v6
+  gem 'minitest', '< 6.0.0'
+
   #{if Rails::VERSION::STRING < '7.0.0'
       "# Higher versions are unsupported in Rails < 7.0.0\n# gem 'minitest', '< 5.12'"
     end}#{'  '}

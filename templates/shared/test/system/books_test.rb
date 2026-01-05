@@ -99,6 +99,14 @@ class BooksTest < ApplicationSystemTestCase
     assert_selector 'li', text: "Title can't be blank", count: 2, wait: 5
   end
 
+  test 'cloudflare widget does not render twice on a single form' do
+    visit new_book_url
+    wait_for_turnstile_inputs(1)
+
+    assert_selector 'div.cf-turnstile', count: 1, visible: :all
+    assert_selector "div.cf-turnstile input[name='cf-turnstile-response']", count: 1, visible: :all
+  end
+
   private
 
   def turnstile_selector
