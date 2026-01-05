@@ -19,26 +19,30 @@
  * form with validation errors — giving users proper feedback without a full reload.
  */
 
-document.addEventListener('ajax:complete', event => {
-    let referrer, snapshot;
-    const xhr = event.detail[0];
+(function() {
+  'use strict';
+
+  document.addEventListener('ajax:complete', function(event) {
+    var referrer, snapshot;
+    var xhr = event.detail[0];
 
     // Check if the response is HTML (e.g., a rendered form with errors)
     if ((xhr.getResponseHeader('Content-Type') || '').substring(0, 9) === 'text/html') {
-        referrer = window.location.href;
+      referrer = window.location.href;
 
-        // Wrap the response in a Turbolinks snapshot
-        snapshot = Turbolinks.Snapshot.wrap(xhr.response);
+      // Wrap the response in a Turbolinks snapshot
+      snapshot = Turbolinks.Snapshot.wrap(xhr.response);
 
-        // Store the snapshot in Turbolinks' cache
-        Turbolinks.controller.cache.put(referrer, snapshot);
+      // Store the snapshot in Turbolinks' cache
+      Turbolinks.controller.cache.put(referrer, snapshot);
 
-        // Revisit the current page to restore the updated form view with errors
-        return Turbolinks.visit(referrer, {
-            action: 'restore'
-        });
+      // Revisit the current page to restore the updated form view with errors
+      return Turbolinks.visit(referrer, {
+        action: 'restore'
+      });
     }
 
     // For non-HTML responses (e.g., JSON), do nothing
     return true;
-}, false);
+  }, false);
+}());
