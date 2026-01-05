@@ -19,6 +19,9 @@ append_to_file 'Gemfile', <<~RUBY
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
+  # Rails currently has an incompatibility with minitest v6
+  gem 'minitest', '< 6.0.0'
+
   #{if Rails::VERSION::STRING < '7.0.0'
       "# Higher versions are unsupported in Rails < 7.0.0\n# gem 'minitest', '< 5.12'"
     end}#{'  '}
@@ -64,7 +67,7 @@ end
 
 # 4) configure minitest-retry in test_helper.rb
 gsub_file 'test/test_helper.rb', %r{require ['"]rails/test_help['"]\n},
-          "\\0require 'minitest/retry'\nMinitest::Retry.use!\n"
+          "\\0require 'minitest/retry'\n\nMinitest::Retry.use! if ENV['CI'].present?\n"
 
 # 5) turbo AJAX-cache helper
 packer_js = 'app/javascript/packs/application.js'
