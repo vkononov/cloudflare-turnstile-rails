@@ -9,6 +9,7 @@ AllCops:
   NewCops: enable
   Exclude:
     - .git/**/*
+    - node_modules/**/*
     - vendor/bundle/**/*
 
 Layout/IndentationConsistency:
@@ -43,4 +44,3 @@ Style/EmptyElse:
 
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
-

@@ -9,16 +9,30 @@ clear
 
 # linter configuration paths
 RUBOCOP_CONFIG=.rubocop.yml
+ESLINT_CONFIG=eslint.config.js
 
 # Checking for existence of configuration files...
 test -e ${RUBOCOP_CONFIG} || { echo -e "${ERROR_COLOR}"ERROR: ${RUBOCOP_CONFIG} not found."${RESET_COLOR}"; exit 1; }
+test -e ${ESLINT_CONFIG} || { echo -e "${ERROR_COLOR}"ERROR: ${ESLINT_CONFIG} not found."${RESET_COLOR}"; exit 1; }
 
-# Running linters
-echo -e "${HIGHLIGHT_COLOR}"Linting Ruby on Rails using RuboCop..."${RESET_COLOR}"
+valid=true
+
+# Running Ruby linter
+echo -e "${HIGHLIGHT_COLOR}"Linting Ruby using RuboCop..."${RESET_COLOR}"
 if [[ "$1" == "--no-fix" ]]; then
         bundle exec rubocop || { valid=false; }
 else
-        bundle exec rubocop --autocorrect-all  || { valid=false; }
+        bundle exec rubocop --autocorrect-all || { valid=false; }
+fi
+
+echo ""
+
+# Running JavaScript linter
+echo -e "${HIGHLIGHT_COLOR}"Linting JavaScript using ESLint..."${RESET_COLOR}"
+if [[ "$1" == "--no-fix" ]]; then
+        npx eslint . || { valid=false; }
+else
+        npx eslint . --fix || { valid=false; }
 fi
 
 # Printing summary
