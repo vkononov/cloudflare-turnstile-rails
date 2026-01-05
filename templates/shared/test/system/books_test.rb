@@ -120,20 +120,26 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
     start = Time.now
     stable_since = nil
     context = message ? " (#{message})" : ''
+    size = 0
 
     loop do
-      inputs = all("div.cf-turnstile input[name='cf-turnstile-response']", visible: :all)
-      size = inputs.size
+      begin
+        inputs = all("div.cf-turnstile input[name='cf-turnstile-response']", visible: :all)
+        size = inputs.size
 
-      if size == count && inputs.all? { |i| i.value.to_s.strip != '' }
-        # once we hit the desired size with nonempty values,
-        # wait a moment to make sure it's stable
-        stable_since ||= Time.now
-        return if Time.now - stable_since > 0.5
-      elsif size > count
-        flunk "Expected #{count} Turnstile widgets, but found #{size}#{context}"
-      else
-        # reset the stability countdown if size changed
+        if size == count && inputs.all? { |i| i.value.to_s.strip != '' }
+          # once we hit the desired size with nonempty values,
+          # wait a moment to make sure it's stable
+          stable_since ||= Time.now
+          return if Time.now - stable_since > 0.5
+        elsif size > count
+          flunk "Expected #{count} Turnstile widgets, but found #{size}#{context}"
+        else
+          # reset the stability countdown if size changed
+          stable_since = nil
+        end
+      rescue Selenium::WebDriver::Error::StaleElementReferenceError
+        # DOM changed while we were checking elements; reset and retry
         stable_since = nil
       end
 
