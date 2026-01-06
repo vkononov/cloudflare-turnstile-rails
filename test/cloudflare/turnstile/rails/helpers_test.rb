@@ -79,6 +79,19 @@ module Cloudflare
 
           assert_match(/data-sitekey="OVERRIDE"/, html)
         end
+
+        test 'script tag is only rendered once when called multiple times' do
+          first_html = cloudflare_turnstile_tag
+          second_html = cloudflare_turnstile_tag
+
+          # First call should include the script tag
+          assert_match(/<script[^>]+src="[^"]*cloudflare_turnstile_helper\.js"[^>]*>/, first_html)
+          assert_match(/<div[^>]+class="cf-turnstile"/, first_html)
+
+          # Second call should NOT include the script tag, only the widget div
+          refute_match(/<script/, second_html)
+          assert_match(/<div[^>]+class="cf-turnstile"/, second_html)
+        end
       end
     end
   end
