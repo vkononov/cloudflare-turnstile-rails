@@ -19,7 +19,9 @@ module Cloudflare
 
         def valid_turnstile?(model: nil, **opts)
           response = verify_turnstile(model: model, **opts)
-          response.is_a?(VerificationResponse) && response.success?
+          success = response.is_a?(VerificationResponse) && response.success?
+          flash[:alert] = ErrorMessage.default if !success && model.nil?
+          success
         end
 
         alias turnstile_valid? valid_turnstile?
