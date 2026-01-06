@@ -1,0 +1,15 @@
+<h1>Contact Us</h1>
+
+<%= form_with url: contact_path, method: :post, id: 'contact-form' do |form| %>
+  <div>
+    <%= form.label :message %>
+    <%= form.text_area :message %>
+  </div>
+
+  <%= cloudflare_turnstile_tag %>
+
+  <div>
+    <%= form.submit 'Send Message' %>
+  </div>
+<% end %>
+

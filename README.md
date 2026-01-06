@@ -101,14 +101,28 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 
 #### Simple Validation
 
-* To validate a Turnstile response in your controller, use either `valid_turnstile?` or `turnstile_valid?`. Both methods behave identically and return a `boolean`. The `model` parameter is optional but recommended for automatic error handling:
+* To validate a Turnstile response in your controller, use either `valid_turnstile?` or `turnstile_valid?`. Both methods behave identically and return a `boolean`. The `model` parameter is optional:
 
   ```ruby
   if valid_turnstile?(model: @user)
     # Passed: returns true
   else
-    # Failed: returns false, adds errors to @user
+    # Failed: returns false, adds errors to @user.errors
     render :new, status: :unprocessable_entity
+  end
+  ```
+
+* When **no model is provided** and verification fails, `valid_turnstile?` automatically sets `flash[:alert]` with the error message. This is useful for redirect-based flows:
+
+  ```ruby
+  def create
+    if valid_turnstile?
+      # Passed: no model needed
+      redirect_to dashboard_path, notice: 'Success!'
+    else
+      # Failed: flash[:alert] is automatically set
+      redirect_to contact_path
+    end
   end
   ```
 
@@ -134,13 +148,14 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   result = verify_turnstile(model: @user)
   ```
 
-  This method still adds errors to the model if verification fails. You can query the response:
+  This method adds errors to the model if verification fails, but unlike `valid_turnstile?`, it does **not** automatically set flash messages. This gives you full control over error handling:
 
   ```ruby
   if result.success?
     # Passed
   else
-    # Failed — inspect result.errors or result.raw
+    # Failed — handle errors yourself
+    flash[:error] = "Custom message: #{result.errors.join(', ')}"
   end
   ```
 

@@ -36,11 +36,14 @@ module Cloudflare
         def setup
           @model = DummyModel.new
           @params = {}
+          @flash = {}
           singleton_class.define_method(:params) { @params }
+          singleton_class.define_method(:flash) { @flash }
         end
 
         def teardown
           singleton_class.send(:remove_method, :params)
+          singleton_class.send(:remove_method, :flash)
         end
 
         def test_missing_response_adds_default_error
@@ -155,6 +158,47 @@ module Cloudflare
 
             assert_equal fake, result
             assert_equal 'param-from-params', captured[:response]
+          end
+        end
+
+        def test_valid_turnstile_sets_flash_alert_when_no_model_and_failure
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?
+
+            assert_equal ErrorMessage.default, @flash[:alert]
+          end
+        end
+
+        def test_valid_turnstile_does_not_set_flash_when_model_provided
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(model: @model)
+
+            assert_empty @flash
+            assert_equal [[:base, ErrorMessage.default]], @model.errors.added
+          end
+        end
+
+        def test_valid_turnstile_does_not_set_flash_on_success
+          fake = VerificationResponse.new({ 'success' => true })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?
+
+            assert_empty @flash
+          end
+        end
+
+        def test_verify_turnstile_never_sets_flash
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            verify_turnstile
+
+            assert_empty @flash
           end
         end
       end

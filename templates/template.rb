@@ -45,9 +45,12 @@ RUBY
 # 3) copy over all the shared app files
 %w[
   app/controllers/pages_controller.rb
+  app/controllers/contacts_controller.rb
   app/controllers/books_controller.rb.tt
   app/models/book.rb.tt
+  app/views/layouts/application.html.erb
   app/views/pages/home.html.erb
+  app/views/contacts/new.html.erb
   app/views/books/create.js.erb
   app/views/books/_form.html.erb
   app/views/books/new.html.erb
@@ -56,8 +59,11 @@ RUBY
   config/initializers/content_security_policy.rb
   config/routes.rb
   test/application_system_test_case.rb
+  test/support/turnstile_system_helpers.rb
   test/controllers/books_controller_test.rb.tt
+  test/controllers/contacts_controller_test.rb
   test/system/books_test.rb
+  test/system/contacts_test.rb
 ].each do |shared_path|
   if shared_path.end_with?('.tt')
     template shared_path, shared_path.sub(/\.tt$/, ''), force: true
