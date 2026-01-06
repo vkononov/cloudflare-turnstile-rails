@@ -134,6 +134,34 @@ module Cloudflare
           err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
           assert_equal expected, err.message
         end
+
+        def test_timeout_raises_configuration_error
+          stub_request(:post, @url).to_timeout
+
+          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+          assert_match(/timed out/, err.message)
+        end
+
+        def test_ssl_error_raises_configuration_error
+          stub_request(:post, @url).to_raise(OpenSSL::SSL::SSLError.new('certificate verify failed'))
+
+          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+          assert_match(/SSL verification failed/, err.message)
+        end
+
+        def test_socket_error_raises_configuration_error
+          stub_request(:post, @url).to_raise(SocketError.new('getaddrinfo: Name or service not known'))
+
+          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+          assert_match(/Network error/, err.message)
+        end
+
+        def test_connection_refused_raises_configuration_error
+          stub_request(:post, @url).to_raise(Errno::ECONNREFUSED.new('Connection refused'))
+
+          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+          assert_match(/Network error/, err.message)
+        end
       end
     end
   end
