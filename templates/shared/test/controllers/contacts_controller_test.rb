@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class PagesControllerTest < ActionDispatch::IntegrationTest
+class ContactsControllerTest < ActionDispatch::IntegrationTest
   include Rails.application.routes.url_helpers
 
   setup do
@@ -10,8 +10,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test 'GET /contact renders the contact form' do
-    get contact_url
+  test 'GET /contact/new renders the contact form' do
+    get new_contact_url
 
     assert_response :success
     assert_select 'form#contact-form'
@@ -30,7 +30,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     Cloudflare::Turnstile::Rails.configuration.secret_key = '2x0000000000000000000000000000000AA'
     post contact_url
 
-    assert_redirected_to contact_url
+    assert_redirected_to new_contact_url
     assert_equal Cloudflare::Turnstile::Rails::ErrorMessage.default, flash[:alert]
   end
 end
