@@ -89,7 +89,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
   That's it! Though it is recommended to match your `theme` and `language` to your app's design and locale:
 
    ```erb
-   <%= cloudflare_turnstile_tag data: { theme: 'auto', language: 'en' } %>
+   <%= cloudflare_turnstile_tag data: { theme: 'light', language: 'en' } %>
    ```
 
 * For all available **data-**\* options (e.g., `action`, `cdata`, `theme`, etc.), refer to the official Cloudflare client-side rendering docs:
@@ -177,7 +177,7 @@ The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompany
 
 ### Turbo & Turbo Streams Support
 
-All widgets will re‑initialize automatically on full and soft navigations (`turbo:load`), on `<turbo-stream>` renders (`turbo:before-stream-render`), and on DOM mutations — no extra wiring needed.
+All widgets will re‑initialize automatically on Turbo navigations (`turbo:render`) and on `<turbo-stream>` renders (`turbo:before-stream-render`) — no extra wiring needed.
 
 ### Turbolinks Support
 
@@ -323,11 +323,8 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
 
 ## Troubleshooting
 
-**Duplicate Widgets**
-- If more than one Turnstile widget appears in the same container, this indicates a bug in the gem—please [open an issue](https://github.com/vkononov/cloudflare-turnstile-rails/issues) so it can be addressed.
-
 **Explicit Rendering**
-- If you've configured explicit mode (`config.render = 'explicit'` or `cloudflare_turnstile_tag render: 'explicit'`) but widgets still auto-render, override the default container class:
+- If you've configured explicit mode (`config.render = 'explicit'`) but widgets still auto-render, override the default container class:
 
   ```erb
   <%= cloudflare_turnstile_tag class: nil %>
