@@ -59,6 +59,7 @@ RUBY
   config/initializers/content_security_policy.rb
   config/routes.rb
   test/application_system_test_case.rb
+  test/support/turnstile_system_helpers.rb
   test/controllers/books_controller_test.rb.tt
   test/controllers/contacts_controller_test.rb
   test/system/books_test.rb
