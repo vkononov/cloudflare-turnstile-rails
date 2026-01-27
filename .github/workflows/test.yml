@@ -24,6 +24,8 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
+      - name: Fix insecure world-writable gem directory
+        run: sudo chmod +t "$(ruby -e 'puts Gem.dir')/gems"
       - name: Install dependencies
         run: bundle install && bundle exec appraisal install
       - name: Run tests
