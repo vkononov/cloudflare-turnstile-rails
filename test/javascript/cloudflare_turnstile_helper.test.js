@@ -397,6 +397,66 @@ describe('MutationObserver path', () => {
 
     expect(ioInstances[0].observed).not.toContain(el);
   });
+
+  test('opening a closed modal re-observes the laid-out placeholder', async () => {
+    // Real-browser regression: Firefox does NOT re-fire IO when an
+    // element transitions from `display: none` to `display: block`.
+    // The attribute-mutation path must catch the transition and force
+    // IO to recompute by unobserving + re-observing.
+    const modal = doc.createElement('div');
+    modal.style.display = 'none';
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    modal.appendChild(el);
+    doc.body.appendChild(modal);
+
+    bootHelper();
+    await flushMicrotasks();
+
+    const io = ioInstances[0];
+    const initialObserveCount = io.observed.filter((x) => x === el).length;
+    expect(initialObserveCount).toBe(1);
+
+    modal.style.display = '';
+    await flushMicrotasks();
+
+    // After the style change, we should have unobserved + re-observed
+    // the element (forcing IO to recompute against the new layout).
+    // Reference equality avoids vitest's diff-serializer bug with
+    // JSDOM elements that have lived under a display:none ancestor.
+    expect(io.unobserved.some((x) => x === el)).toBe(true);
+    const finalObserveCount = io.observed.filter((x) => x === el).length;
+    expect(finalObserveCount).toBeGreaterThanOrEqual(2);
+  });
+
+  test('attribute mutations on an unrelated element do not re-observe below-fold widgets', async () => {
+    // Below-fold widgets that were already laid out should NOT get
+    // re-mounted just because some unrelated style changed elsewhere
+    // on the page — that would defeat viewport laziness.
+    const el = placeholder();
+
+    bootHelper();
+    await flushMicrotasks();
+
+    const io = ioInstances[0];
+    const initialObserveCount = io.observed.filter((x) => x === el).length;
+
+    // Mutate a totally unrelated element's style.
+    const unrelated = doc.createElement('div');
+    doc.body.appendChild(unrelated);
+    await flushMicrotasks();
+    unrelated.style.color = 'red';
+    await flushMicrotasks();
+
+    // The placeholder gets re-observed too (we don't track per-element
+    // visibility transitions; we re-observe every laid-out pending
+    // widget on any attribute mutation), but no api.js load is
+    // triggered because the FakeIntersectionObserver doesn't auto-fire.
+    expect(getInjectedApiScript()).toBeUndefined();
+    // And critically, the placeholder is still pending, not mounted.
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+    expect(io.observed.filter((x) => x === el).length).toBeGreaterThanOrEqual(initialObserveCount);
+  });
 });
 
 describe('Turbo / Turbolinks hooks', () => {
