@@ -17,6 +17,19 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Several tests below mutate `lazy_mount` and `render` to verify
+  # opt-out paths. Without restoring defaults afterwards those mutated
+  # values would bleed into other test files (e.g. the system tests),
+  # which would suddenly see `data-lazy-mount="false"` in the helper
+  # script and never auto-mount their widgets. Process-wide config means
+  # process-wide cleanup.
+  teardown do
+    Cloudflare::Turnstile::Rails.configure do |config|
+      config.render = 'explicit'
+      config.lazy_mount = true
+    end
+  end
+
   test 'helper script tag carries v2 lazy-mount attributes by default' do
     get new_contact_url
 
