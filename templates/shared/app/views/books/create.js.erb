@@ -9,7 +9,10 @@
     oldForm.replaceWith(newForm);
 
     const turnstileContainer = newForm.querySelector('.cf-turnstile');
-    if (typeof turnstile !== "undefined" && turnstileContainer && turnstileContainer.childElementCount === 0) {
+    if (turnstileContainer && window.cfTurnstile) {
+        window.cfTurnstile.mount(turnstileContainer);
+    }
+    else if (typeof turnstile !== "undefined" && turnstileContainer && turnstileContainer.childElementCount === 0) {
         turnstile.render(turnstileContainer);
     }
 })();
