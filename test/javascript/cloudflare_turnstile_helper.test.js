@@ -553,6 +553,27 @@ describe('hidden-in-modal visibility filter', () => {
     expect(win.turnstile.render).toHaveBeenCalledWith(visibleEl);
   });
 
+  test('IntersectionObserver entries for display:none targets are filtered out', () => {
+    // Headless Chrome (and some other engines) report isIntersecting=true
+    // for elements whose ancestors are display:none — their (0,0,0,0)
+    // bounding box overlaps the viewport+rootMargin. The helper must not
+    // render those; that's the entire point of lazy-mounting widgets that
+    // live inside closed modals.
+    const modal = doc.createElement('div');
+    modal.style.display = 'none';
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    modal.appendChild(el);
+    doc.body.appendChild(modal);
+
+    bootHelper();
+
+    ioInstances[0].trigger(el, true);
+
+    expect(getInjectedApiScript()).toBeUndefined();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+  });
+
   test('once the modal "opens", the IntersectionObserver path mounts the widget', () => {
     const modal = doc.createElement('div');
     modal.style.display = 'none';
