@@ -26,6 +26,19 @@ class LazyMountTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
   end
 
+  test 'submitting the lazy form after the widget mounts validates server-side' do
+    # Full round-trip: mount the widget, submit the form, verify that
+    # the resulting Turnstile token reaches the server and the
+    # PagesController#lazy_demo action accepts it.
+    visit lazy_demo_url
+    mount_turnstile_widgets!
+    wait_for_turnstile_inputs(1)
+
+    click_on 'Submit lazy form'
+
+    assert_text 'Lazy demo verified.'
+  end
+
   test 'cfTurnstile public API is exposed on window' do
     visit lazy_demo_url
 

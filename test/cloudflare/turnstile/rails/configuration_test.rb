@@ -5,7 +5,7 @@ require 'cloudflare/turnstile/rails/configuration'
 module Cloudflare
   module Turnstile
     module Rails
-      class ConfigurationTest < Minitest::Test
+      class ConfigurationTest < Minitest::Test # rubocop:disable Metrics/ClassLength
         def setup
           @config = Configuration.new
         end
@@ -100,6 +100,47 @@ module Cloudflare
           @config.lazy_mount = false
 
           refute @config.effective_lazy_mount
+        end
+
+        def test_v1_explicit_upgrade_fingerprint_disables_effective_lazy_mount
+          # Mirrors a v1.x app that set config.render = 'explicit' but
+          # never knew about config.lazy_mount (because v2.0 introduced it).
+          @config.render = 'explicit'
+
+          assert_predicate @config, :v1_explicit_upgrade?
+          refute @config.effective_lazy_mount,
+                 'v1.x apps with explicit render should auto-opt-out of lazy mounting'
+        end
+
+        def test_v1_explicit_upgrade_fingerprint_cleared_by_explicit_lazy_mount_true
+          @config.render = 'explicit'
+          @config.lazy_mount = true
+
+          refute_predicate @config, :v1_explicit_upgrade?
+          assert @config.effective_lazy_mount,
+                 'setting lazy_mount = true explicitly opts back into v2 lazy mounting'
+        end
+
+        def test_v1_explicit_upgrade_fingerprint_cleared_by_explicit_lazy_mount_false
+          @config.render = 'explicit'
+          @config.lazy_mount = false
+
+          refute_predicate @config, :v1_explicit_upgrade?
+          refute @config.effective_lazy_mount
+        end
+
+        def test_v1_explicit_upgrade_fingerprint_does_not_apply_to_fresh_install
+          # Defaults only — render is 'explicit' implicitly.
+          refute_predicate @config, :v1_explicit_upgrade?
+          assert @config.effective_lazy_mount,
+                 'fresh installs should still get the v2 default of lazy mounting on'
+        end
+
+        def test_v1_explicit_upgrade_fingerprint_does_not_apply_when_render_is_auto
+          @config.render = 'auto'
+
+          refute_predicate @config, :v1_explicit_upgrade?,
+                           'fingerprint requires render to be the v1.x-explicit string, not auto'
         end
 
         def test_lazy_mount_misconfigured_combo

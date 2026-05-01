@@ -59,7 +59,8 @@ module Cloudflare
             Railtie.emit_upgrade_warnings
           end
 
-          assert_match(/config\.lazy_mount/, io.string)
+          assert_match(/upgrade fingerprint/, io.string)
+          assert_match(/Lazy mounting has been disabled/, io.string)
           assert_match(%r{github\.com/vkononov/cloudflare-turnstile-rails}, io.string)
         end
 
@@ -69,7 +70,7 @@ module Cloudflare
             Railtie.emit_upgrade_warnings
           end
 
-          refute_match(/config\.lazy_mount/, io.string,
+          refute_match(/upgrade fingerprint/, io.string,
                        'fresh installs should not see the upgrade warning')
         end
 
@@ -80,7 +81,7 @@ module Cloudflare
             Railtie.emit_upgrade_warnings
           end
 
-          refute_match(/Set\s+config\.lazy_mount/, io.string)
+          refute_match(/upgrade fingerprint/, io.string)
         end
 
         test 'emits combo-4 misconfiguration warning when render=auto with default lazy_mount' do

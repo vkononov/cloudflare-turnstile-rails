@@ -24,9 +24,13 @@ Gem::Specification.new do |spec|
     types anywhere on the page), and api.js is no longer fetched on every
     page load. config.render now defaults to 'explicit' to make this safe.
 
-    Most apps need no changes. If you were on v1.x and customised
-    config.render or called turnstile.render() yourself, please review the
-    upgrade guide:
+    Most apps need no changes. If your v1.x config already had
+    config.render = 'explicit' (and you were calling turnstile.render()
+    from your own JavaScript), the gem now detects that fingerprint at
+    boot and keeps lazy mounting OFF for you so your existing code keeps
+    working. To opt into v2 lazy mounting, set config.lazy_mount = true.
+
+    Full upgrade guide:
 
       #{spec.homepage}#upgrading-from-v1x-to-v20
   MESSAGE

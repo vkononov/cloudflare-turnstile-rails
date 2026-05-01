@@ -157,6 +157,7 @@ describe('public API surface', () => {
     expect(reAddedEvents).not.toContain('turbo:render');
     expect(reAddedEvents).not.toContain('turbo:frame-load');
     expect(reAddedEvents).not.toContain('turbolinks:load');
+    expect(reAddedEvents).not.toContain('turbo:before-stream-render');
   });
 });
 
@@ -293,9 +294,48 @@ describe('isAlreadyMounted (via mount)', () => {
     expect(getInjectedApiScript()).toBeUndefined();
   });
 
-  test('skips mount when the element already has child elements', () => {
+  test('skips mount when the element already contains an iframe (Cloudflare auto-render)', () => {
+    // render=auto drops the iframe in without going through our mount()
+    // path, so the marker is never set. The iframe lookup catches this.
     const el = placeholder();
     el.appendChild(doc.createElement('iframe'));
+    bootHelper();
+
+    win.cfTurnstile.mount(el);
+    expect(getInjectedApiScript()).toBeUndefined();
+  });
+
+  test('proceeds with mount when the element contains a non-iframe placeholder child (e.g. a spinner)', () => {
+    // Consumers sometimes put loading/fallback content inside the
+    // placeholder. That content must NOT lock the widget out of being
+    // mounted — only an actual Cloudflare iframe should.
+    const el = placeholder();
+    const spinner = doc.createElement('span');
+    spinner.textContent = 'Loading...';
+    el.appendChild(spinner);
+    bootHelper();
+
+    win.cfTurnstile.mount(el);
+
+    // mount() must reach ensureLoaded() and inject api.js.
+    expect(getInjectedApiScript()).toBeTruthy();
+
+    const render = vi.fn();
+    win.turnstile = { render };
+    getInjectedApiScript().onload();
+
+    expect(render).toHaveBeenCalledWith(el);
+    expect(el.dataset.turnstileRendered).toBe('true');
+  });
+
+  test('skips mount when an iframe is nested deep inside the placeholder', () => {
+    // The marker normally lives directly under the placeholder, but be
+    // defensive — Cloudflare could change the structure. querySelector
+    // (vs childElementCount) walks the subtree.
+    const el = placeholder();
+    const wrapper = doc.createElement('div');
+    wrapper.appendChild(doc.createElement('iframe'));
+    el.appendChild(wrapper);
     bootHelper();
 
     win.cfTurnstile.mount(el);
@@ -471,6 +511,52 @@ describe('Turbo / Turbolinks hooks', () => {
     const added = doc.body.lastElementChild;
     expect(ioInstances[0].observed).toContain(added);
   });
+
+  test('turbo:before-stream-render wraps detail.render so the stream payload is observed', () => {
+    // Turbo Stream actions (append/replace/update/morph) do NOT fire
+    // turbo:render. Instead Turbo dispatches turbo:before-stream-render
+    // with `event.detail.render` set to the function that does the
+    // actual DOM insert. The helper must wrap that function so widgets
+    // delivered via stream get picked up immediately.
+    bootHelper();
+    expect(ioInstances[0].observed.length).toBe(0);
+
+    let originalCalled = false;
+    const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
+    ev.detail = {
+      render: function() {
+        originalCalled = true;
+        // Simulate Turbo applying the stream payload by inserting a placeholder.
+        doc.body.insertAdjacentHTML('beforeend', '<div class="cf-turnstile"></div>');
+      }
+    };
+
+    doc.dispatchEvent(ev);
+    // The handler should have replaced detail.render with a wrapper.
+    ev.detail.render();
+
+    expect(originalCalled).toBe(true);
+    const added = doc.body.lastElementChild;
+    expect(ioInstances[0].observed).toContain(added);
+  });
+
+  test('turbo:before-stream-render with no event.detail does not throw', () => {
+    bootHelper();
+
+    const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
+    // No detail set — exercise the defensive branch.
+    expect(() => doc.dispatchEvent(ev)).not.toThrow();
+  });
+
+  test('turbo:before-stream-render with non-function detail.render is left alone', () => {
+    bootHelper();
+
+    const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
+    ev.detail = { render: 'not a function' };
+    doc.dispatchEvent(ev);
+
+    expect(ev.detail.render).toBe('not a function');
+  });
 });
 
 describe('eager mode (data-lazy-mount=false)', () => {
@@ -498,6 +584,14 @@ describe('eager mode (data-lazy-mount=false)', () => {
     fireGesture('turbolinks:load');
 
     expect(dispatchSpy).not.toHaveBeenCalled();
+
+    // turbo:before-stream-render must also be a no-op in eager mode —
+    // Cloudflare's api.js (or the consumer's manual render) is in charge.
+    const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
+    ev.detail = { render: function() {} };
+    const originalRender = ev.detail.render;
+    doc.dispatchEvent(ev);
+    expect(ev.detail.render).toBe(originalRender);
   });
 
   test('does not register gesture listeners', () => {

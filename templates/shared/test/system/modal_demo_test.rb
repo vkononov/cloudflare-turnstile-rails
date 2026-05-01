@@ -67,4 +67,22 @@ class ModalDemoTest < ApplicationSystemTestCase
     mount_turnstile_widgets!
     wait_for_turnstile_inputs(1, message: 'after mountAll()')
   end
+
+  test 'submitting the modal form after opening the modal validates server-side' do
+    # Full round-trip: open modal, wait for the IO-driven mount to land
+    # the token in the form, submit, verify server-side validation
+    # accepts it. Without this we'd have no signal that a regression
+    # (wrong form scoping, detached iframe, stale token, missed Turbo
+    # stream wrap, etc.) had broken the modal-protected submission flow.
+    visit modal_demo_url
+
+    click_on 'Open modal'
+    wait_for_turnstile_inputs(1, message: 'after opening modal')
+
+    # The submit button lives inside the modal. Scope the click so we
+    # don't accidentally hit any other 'Submit' control on the page.
+    within('#modal') { click_on 'Submit' }
+
+    assert_text 'Modal demo verified.'
+  end
 end

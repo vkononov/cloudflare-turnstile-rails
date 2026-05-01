@@ -38,16 +38,15 @@ module Cloudflare
         end
 
         def self.warn_v1_explicit_upgrade(config)
-          return unless config.render_explicitly_set?
-          return unless config.render == 'explicit'
-          return if config.lazy_mount_explicitly_set?
+          return unless config.v1_explicit_upgrade?
 
           ::Rails.logger&.warn(
-            "[cloudflare-turnstile-rails] You have config.render = 'explicit' but no " \
-            'config.lazy_mount setting. v2.0 introduced config.lazy_mount (default true), ' \
-            'which may conflict with manual turnstile.render() calls from v1.x. Set ' \
-            'config.lazy_mount explicitly (true or false) to silence this notice. ' \
-            "See: #{UPGRADE_GUIDE_URL}"
+            "[cloudflare-turnstile-rails] config.render = 'explicit' is set without a " \
+            'config.lazy_mount setting (the v1.x -> v2.0 upgrade fingerprint). ' \
+            'Lazy mounting has been disabled automatically to keep manual ' \
+            'turnstile.render() calls from v1.x working. To opt into v2 lazy mounting, ' \
+            'set config.lazy_mount = true. To silence this notice without changing ' \
+            "behaviour, set config.lazy_mount = false. See: #{UPGRADE_GUIDE_URL}"
           )
         end
 
