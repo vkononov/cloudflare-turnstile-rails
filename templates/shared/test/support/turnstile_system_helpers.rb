@@ -1,4 +1,11 @@
 module TurnstileSystemHelpers
+  # Force-mount every pending Turnstile placeholder by invoking the public
+  # JS API the gem exposes. Useful in system tests that don't rely on
+  # scrolling or first-gesture triggers.
+  def mount_turnstile_widgets!
+    execute_script('window.cfTurnstile && window.cfTurnstile.mountAll && window.cfTurnstile.mountAll();')
+  end
+
   def wait_for_turnstile_inputs(count, timeout: 5, message: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
     start = Time.now
     stable_since = nil

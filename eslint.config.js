@@ -9,7 +9,9 @@ export default [
       'vendor/**',
       'tmp/**',
       'test/generators/tmp/**',
-      'eslint.config.js'
+      'test/javascript/**',
+      'eslint.config.js',
+      'vitest.config.js'
     ]
   },
   {

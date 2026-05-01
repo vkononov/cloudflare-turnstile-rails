@@ -1,0 +1,19 @@
+<h1>Lazy mount demo</h1>
+
+<p>
+  The widget below is far below the fold. With <code>config.lazy_mount = true</code>
+  it should not render until the viewer scrolls into it (or the test
+  helper calls <code>cfTurnstile.mountAll()</code>).
+</p>
+
+<div id="spacer" style="height: 200vh; background: #f0f0f0;">
+  Scroll down to find the Turnstile widget.
+</div>
+
+<%= form_with url: lazy_demo_path, method: :post, id: 'lazy-demo-form' do %>
+  <%= cloudflare_turnstile_tag %>
+
+  <div>
+    <%= submit_tag 'Submit lazy form' %>
+  </div>
+<% end %>

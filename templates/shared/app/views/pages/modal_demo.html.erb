@@ -1,0 +1,62 @@
+<h1>Modal-hidden Turnstile demo</h1>
+
+<p id="outside-modal-text">
+  The Turnstile widget below is wrapped in a <code>display: none</code>
+  modal. With <code>config.lazy_mount = true</code> it should stay
+  unrendered even after the user clicks elsewhere on the page; it should
+  only render once the modal is opened (which makes the widget visible
+  to <code>IntersectionObserver</code>).
+</p>
+
+<button type="button" id="open-modal-btn" data-action="open-modal">
+  Open modal
+</button>
+
+<div id="backdrop" data-action="close-modal" hidden
+     style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1;">
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" hidden
+     style="display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); padding: 1.5em;
+            background: #fff; border: 1px solid #ccc; z-index: 2;
+            min-width: 320px;">
+  <h2>Please verify</h2>
+
+  <%= form_with url: modal_demo_path, method: :post, id: 'modal-demo-form' do %>
+    <%= cloudflare_turnstile_tag %>
+
+    <div style="margin-top: 1em;">
+      <%= submit_tag 'Submit' %>
+      <button type="button" data-action="close-modal">Cancel</button>
+    </div>
+  <% end %>
+</div>
+
+<%# Plain inline JS to drive the modal — no framework dependency. The
+    nonce keeps it compatible with the template's CSP initializer. %>
+<%= javascript_tag(nonce: (defined?(content_security_policy_nonce) ? content_security_policy_nonce : nil)) do %>
+  (function() {
+    var modal = document.getElementById('modal');
+    var backdrop = document.getElementById('backdrop');
+
+    function open() {
+      modal.hidden = false;
+      modal.style.display = '';
+      backdrop.hidden = false;
+    }
+
+    function close() {
+      modal.hidden = true;
+      modal.style.display = 'none';
+      backdrop.hidden = true;
+    }
+
+    document.addEventListener('click', function(event) {
+      var trigger = event.target.closest && event.target.closest('[data-action]');
+      if (!trigger) { return; }
+      if (trigger.dataset.action === 'open-modal') { open(); }
+      if (trigger.dataset.action === 'close-modal') { close(); }
+    });
+  })();
+<% end %>
