@@ -5,6 +5,8 @@ module Cloudflare
         engine_name 'cloudflare_turnstile_rails'
 
         initializer 'cloudflare_turnstile.assets' do |app|
+          next unless app.config.respond_to?(:assets)
+
           js_path = ::Cloudflare::Turnstile::Rails::Engine.root.join(
             'lib', 'cloudflare', 'turnstile', 'rails', 'assets', 'javascripts'
           )
