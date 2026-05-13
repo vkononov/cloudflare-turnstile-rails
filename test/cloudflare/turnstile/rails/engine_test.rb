@@ -18,6 +18,7 @@ module Cloudflare
 
         def test_initializer_skips_when_assets_not_configured
           app = Struct.new(:config).new(Object.new)
+
           assert_nil @initializer.run(app)
         end
 
