@@ -16,6 +16,12 @@ module Cloudflare
           @initializer = Engine.initializers.find { |i| i.name == 'cloudflare_turnstile.assets' }
         end
 
+        def test_initializer_skips_when_assets_not_configured
+          app = Struct.new(:config).new(Object.new)
+
+          assert_nil @initializer.run(app)
+        end
+
         def test_that_initializer_is_defined
           assert @initializer, "Expected an initializer named 'cloudflare_turnstile.assets'"
         end
