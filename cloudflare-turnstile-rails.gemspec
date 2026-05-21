@@ -29,8 +29,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'actionpack', '>= 5.0'
-  spec.add_dependency 'actionview', '>= 5.0'
+  # Uncomment to register a new dependency of your gem
   spec.add_dependency 'railties', '>= 5.0'
 
   # For more information and examples about making a new gem, check out our
