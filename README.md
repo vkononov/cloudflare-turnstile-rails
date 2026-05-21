@@ -39,6 +39,7 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
 - [Upgrade Guide](#upgrade-guide)
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
+- [Contributing](#contributing)
 - [License](#license)
 
 
@@ -198,8 +199,8 @@ All widgets will re‑initialize automatically on Turbo navigations (`turbo:rend
 
 If your Rails app still uses Turbolinks (rather than Turbo), you can add a small helper to your JavaScript pack so that remote form submissions returning HTML correctly display validation errors without a full page reload. Simply copy the file:
 
-```
-templates / shared / cloudflare_turbolinks_ajax_cache.js
+```plaintext
+templates/shared/cloudflare_turbolinks_ajax_cache.js
 ```
 
 into your application's JavaScript entrypoint (for example `app/javascript/packs/application.js`). This script listens for Rails UJS `ajax:complete` events that return HTML, caches the response as a Turbolinks snapshot, and then restores it via `Turbolinks.visit`, ensuring forms with validation errors are re‑rendered seamlessly.
@@ -357,7 +358,7 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
 - When using Rails' CSP nonces, make sure `content_security_policy_nonce` is available in your view context — otherwise the Turnstile script may be blocked.
 
 **Server Validation Errors**
-- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare's [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common [error codes](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/) and [test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/#dummy-sitekeys-and-secret-keys).
+- Validation failures (invalid, expired, or already‑used tokens) surface as model errors. Consult Cloudflare's [server-side troubleshooting](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for common [error codes](https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/) and [test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/#test-sitekeys).
 
 > Still stuck? Check the Cloudflare Turnstile docs: [https://developers.cloudflare.com/turnstile/get-started/](https://developers.cloudflare.com/turnstile/get-started/)
 
@@ -405,7 +406,7 @@ rails new test_app \
   -m templates/template.rb
 ```
 
-Get the exact command from the `test/integration/` folder, where each integration test has a corresponding Rails app template. For example, to replicate the `test/integration/rails7.rb` test for Rails `v7.0.4`, run:
+Get the exact command from the `test/integration/` folder, where each integration test has a corresponding Rails app template. For example, to replicate the `test/integration/rails7_template_test.rb` test for Rails `v7.0.4`, run:
 
 ```bash
 gem install rails -v 7.0.4
