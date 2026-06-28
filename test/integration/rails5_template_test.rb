@@ -28,7 +28,7 @@ class Rails5TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/MethodLength
-    rails_cmd = Gem.bin_path('railties', 'rails')
+    rails_version = Rails::VERSION::STRING
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
@@ -41,7 +41,10 @@ class Rails5TemplateTest < Minitest::Test
           --skip-bootsnap --skip-api
         ] + ['-m', TEMPLATE]
 
-        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
+        # Pin railties to the version under test so `rails new` doesn't load a newer
+        # railties another appraisal installed into the shared gem home.
+        script = "gem 'railties', '= #{rails_version}'; load Gem.bin_path('railties', 'rails')"
+        assert system('ruby', '-e', script, '--', *args), "❌ `rails new` failed: rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
 
         assert system('bin/rails', 'test'), '❌ tests failed in generated app'
