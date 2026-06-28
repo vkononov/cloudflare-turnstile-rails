@@ -45,6 +45,7 @@ class Rails6TemplateTest < Minitest::Test
         # Pin railties to the version under test so `rails new` doesn't load a newer
         # railties another appraisal installed into the shared gem home.
         script = "gem 'railties', '= #{rails_version}'; load Gem.bin_path('railties', 'rails')"
+
         assert system('ruby', '-e', script, '--', *args), "❌ `rails new` failed: rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:system'), '❌ system tests failed in generated app'
