@@ -27,7 +27,7 @@ class Rails5TemplateTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/MethodLength
+  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     rails_version = Rails::VERSION::STRING
 
     Bundler.with_unbundled_env do
