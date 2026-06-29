@@ -50,7 +50,9 @@ class Rails5TemplateTest < Minitest::Test
 
         assert system('bin/rails', 'test'), '❌ tests failed in generated app'
 
-        if Gem::Version.new(Rails::VERSION::STRING) < Gem::Version.new('5.2.0')
+        # System tests exist from Rails 5.1; Rails 5.0 has no ActionDispatch::SystemTestCase.
+        version = Gem::Version.new(Rails::VERSION::STRING)
+        if version >= Gem::Version.new('5.1.0') && version < Gem::Version.new('5.2.0')
           assert system('bin/rails', 'test:system'), '❌ system tests failed in generated app'
         end
       end
