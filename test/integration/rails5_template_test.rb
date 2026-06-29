@@ -27,8 +27,8 @@ class Rails5TemplateTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
-    rails_version = Rails::VERSION::STRING
+  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/MethodLength
+    rails_cmd = Gem.bin_path('railties', 'rails')
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger -r bigdecimal'
@@ -41,18 +41,15 @@ class Rails5TemplateTest < Minitest::Test
           --skip-bootsnap --skip-api
         ] + ['-m', TEMPLATE]
 
-        # Pin railties to the version under test so `rails new` doesn't load a newer
-        # railties another appraisal installed into the shared gem home.
-        script = "gem 'railties', '= #{rails_version}'; load Gem.bin_path('railties', 'rails')"
-
+        # Newer Ruby toolchains ship erb 6, but Rails pins `erb ~> 4`, so an
+        # unbundled `rails new` aborts with a gem conflict. Hold erb below 6.
+        script = "begin; gem 'erb', '< 6'; rescue Gem::LoadError; end; load #{rails_cmd.dump}"
         assert system('ruby', '-e', script, '--', *args), "❌ `rails new` failed: rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
 
         assert system('bin/rails', 'test'), '❌ tests failed in generated app'
 
-        # System tests exist from Rails 5.1; Rails 5.0 has no ActionDispatch::SystemTestCase.
-        version = Gem::Version.new(Rails::VERSION::STRING)
-        if version >= Gem::Version.new('5.1.0') && version < Gem::Version.new('5.2.0')
+        if Gem::Version.new(Rails::VERSION::STRING) < Gem::Version.new('5.2.0')
           assert system('bin/rails', 'test:system'), '❌ system tests failed in generated app'
         end
       end

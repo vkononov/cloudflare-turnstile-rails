@@ -48,7 +48,7 @@ append_to_file 'Gemfile', <<~RUBY
 RUBY
 
 # 3) copy over all the shared app files
-shared_files = %w[
+%w[
   app/controllers/pages_controller.rb
   app/controllers/contacts_controller.rb
   app/controllers/books_controller.rb.tt
@@ -63,21 +63,13 @@ shared_files = %w[
   config/initializers/cloudflare_turnstile.rb
   config/initializers/content_security_policy.rb
   config/routes.rb
+  test/application_system_test_case.rb
+  test/support/turnstile_system_helpers.rb
   test/controllers/books_controller_test.rb.tt
   test/controllers/contacts_controller_test.rb
-]
-
-# System tests rely on ActionDispatch::SystemTestCase, introduced in Rails 5.1.
-if Rails.gem_version >= Gem::Version.new('5.1')
-  shared_files += %w[
-    test/application_system_test_case.rb
-    test/support/turnstile_system_helpers.rb
-    test/system/books_test.rb
-    test/system/contacts_test.rb
-  ]
-end
-
-shared_files.each do |shared_path|
+  test/system/books_test.rb
+  test/system/contacts_test.rb
+].each do |shared_path|
   if shared_path.end_with?('.tt')
     template shared_path, shared_path.sub(/\.tt$/, ''), force: true
   else

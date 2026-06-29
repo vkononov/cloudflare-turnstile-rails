@@ -27,7 +27,7 @@ class Rails8TemplateTest < Minitest::Test
   end
 
   def test_system_tests_pass_in_rails8_generated_app # rubocop:disable Metrics/MethodLength
-    rails_version = Rails::VERSION::STRING
+    rails_cmd = Gem.bin_path('railties', 'rails')
 
     Bundler.with_unbundled_env do
       ENV['RUBYOPT'] = '-r logger'
@@ -43,10 +43,9 @@ class Rails8TemplateTest < Minitest::Test
           --skip-api --skip-decrypted-diffs
         ] + ['-m', TEMPLATE]
 
-        # Pin railties to the version under test so `rails new` doesn't load a newer
-        # railties another appraisal installed into the shared gem home.
-        script = "gem 'railties', '= #{rails_version}'; load Gem.bin_path('railties', 'rails')"
-
+        # Newer Ruby toolchains ship erb 6, but Rails pins `erb ~> 4`, so an
+        # unbundled `rails new` aborts with a gem conflict. Hold erb below 6.
+        script = "begin; gem 'erb', '< 6'; rescue Gem::LoadError; end; load #{rails_cmd.dump}"
         assert system('ruby', '-e', script, '--', *args), "❌ `rails new` failed: rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
         assert system('bin/rails', 'test:all'), '❌ tests failed in generated app'

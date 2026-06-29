@@ -111,8 +111,6 @@ class BooksTest < ApplicationSystemTestCase # rubocop:disable Metrics/ClassLengt
   end
 
   test 'nonce is propagated from helper script to dynamically loaded Cloudflare script' do
-    skip 'CSP nonces require Rails 5.2+' if Rails.gem_version < Gem::Version.new('5.2')
-
     visit new_book_url
     wait_for_turnstile_inputs(1)
 
