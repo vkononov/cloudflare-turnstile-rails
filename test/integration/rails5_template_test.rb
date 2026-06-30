@@ -27,7 +27,7 @@ class Rails5TemplateTest < Minitest::Test
     FileUtils.remove_entry(@tmpdir)
   end
 
-  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/MethodLength
+  def test_system_tests_pass_in_rails5_generated_app # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     rails_cmd = Gem.bin_path('railties', 'rails')
 
     Bundler.with_unbundled_env do
@@ -41,7 +41,11 @@ class Rails5TemplateTest < Minitest::Test
           --skip-bootsnap --skip-api
         ] + ['-m', TEMPLATE]
 
-        assert system(rails_cmd, *args), "❌ `rails new` failed: #{rails_cmd} #{args.join(' ')}"
+        # Newer Ruby toolchains ship erb 6, but Rails pins `erb ~> 4`, so an
+        # unbundled `rails new` aborts with a gem conflict. Hold erb below 6.
+        script = "begin; gem 'erb', '< 6'; rescue Gem::LoadError; end; load #{rails_cmd.dump}"
+
+        assert system('ruby', '-e', script, '--', *args), "❌ `rails new` failed: rails #{args.join(' ')}"
         assert system('bundle', 'install', '--quiet'), '❌ `bundle install` failed in generated app'
 
         assert system('bin/rails', 'test'), '❌ tests failed in generated app'

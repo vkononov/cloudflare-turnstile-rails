@@ -16,6 +16,11 @@ append_to_file 'Gemfile', <<~RUBY
     gem 'benchmark'
   end
 
+  # i18n 1.15.0 uses the Fiber[] storage API (Ruby 3.2+) but declares support for
+  # Ruby >= 3.1, so it installs and crashes on Ruby 3.1. Avoid it below 3.2.
+  # i18n v1.15.1 declares Ruby correctly, so only v1.15.0 needs to be excluded
+  gem 'i18n', '!= 1.15.0' if RUBY_VERSION < '3.2.0'
+
   # Resolve the "uninitialized constant ActiveSupport::LoggerThreadSafeLevel::Logger (NameError)" issue
   gem 'concurrent-ruby', '< 1.3.5'
 
