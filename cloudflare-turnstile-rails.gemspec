@@ -21,11 +21,11 @@ Gem::Specification.new do |spec|
   # Only runtime files (lib, license, readme) are shipped; development and tooling
   # files are excluded to keep the published gem minimal.
   gemspec = File.basename(__FILE__)
+  excluded_files = %w[.rubocop.yml Appraisals Rakefile eslint.config.js package.json]
+  excluded_prefixes = %w[bin/ test/ templates/ .git Gemfile]
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
     ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec) ||
-        %w[.rubocop.yml Appraisals Rakefile eslint.config.js package.json].include?(f) ||
-        f.start_with?(*%w[bin/ test/ templates/ .git Gemfile])
+      (f == gemspec) || excluded_files.include?(f) || f.start_with?(*excluded_prefixes)
     end
   end
   spec.bindir = 'exe'
