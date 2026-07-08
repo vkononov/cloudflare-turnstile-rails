@@ -2,8 +2,10 @@
 
 [![Gem Version](https://img.shields.io/gem/v/cloudflare-turnstile-rails.svg)](https://rubygems.org/gems/cloudflare-turnstile-rails)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Lint Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
-[![Test Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
+[![Ruby](https://img.shields.io/badge/Ruby-2.6%20to%204.0-CC342D?logo=ruby&logoColor=white)](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml)
+[![Rails](https://img.shields.io/badge/Rails-5.0%20to%208.1-D30001?logo=rubyonrails&logoColor=white)](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/Appraisals)
+[![Test Matrix](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/test.yml?branch=main&label=Test%20Matrix&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
+[![Lint Status](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/lint.yml?branch=main&label=Lint&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
 
 Cloudflare Turnstile gem for Ruby on Rails with built-in Turbo and Turbolinks support and CSP compliance.
 
