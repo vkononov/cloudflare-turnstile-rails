@@ -3,7 +3,7 @@ module Cloudflare
     module Rails
       class Configuration
         attr_writer :script_url
-        attr_accessor :site_key, :secret_key, :render, :onload, :auto_populate_response_in_test_env
+        attr_accessor :site_key, :secret_key, :render, :onload, :default_data, :auto_populate_response_in_test_env
 
         def initialize
           @script_url = Cloudflare::SCRIPT_URL
@@ -11,6 +11,7 @@ module Cloudflare
           @secret_key = nil
           @render = nil
           @onload = nil
+          @default_data = {}
           @auto_populate_response_in_test_env = true
         end
 

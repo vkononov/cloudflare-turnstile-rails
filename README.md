@@ -89,10 +89,35 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
    <%= cloudflare_turnstile_tag %>
    ```
 
-  That's it! Though it is recommended to match your `theme` and `language` to your app's design and locale:
+  That's it! By default the widget auto-detects the visitor's `theme` and `language`.
+
+* To match your app's design and locale, set defaults once in the initializer and they'll apply to every `cloudflare_turnstile_tag` automatically:
+
+  ```ruby
+  Cloudflare::Turnstile::Rails.configure do |config|
+    config.default_data = {
+      theme: 'light',
+      language: 'en'
+    }
+  end
+  ```
+
+  Values may also be a proc, evaluated at render time — useful for following the current locale:
+
+  ```ruby
+  config.default_data = { language: -> { I18n.locale } }
+  ```
+
+* You can still override any default (or add extra options) on an individual tag via the `data:` option. Per-tag values take precedence over the configured defaults:
 
    ```erb
-   <%= cloudflare_turnstile_tag data: { theme: 'light', language: 'en' } %>
+   <%= cloudflare_turnstile_tag data: { theme: 'dark' } %>
+   ```
+
+* To drop a configured default on a single tag (so its attribute isn't rendered at all), pass `nil` for that key:
+
+   ```erb
+   <%= cloudflare_turnstile_tag data: { theme: nil } %>
    ```
 
 * For all available **data-**\* options (e.g., `action`, `cdata`, `theme`, etc.), refer to the official Cloudflare client-side rendering docs:
