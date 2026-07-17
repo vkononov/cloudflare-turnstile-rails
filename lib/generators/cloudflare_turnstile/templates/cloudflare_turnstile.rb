@@ -16,6 +16,15 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # config.render = 'explicit'
   # config.onload = 'onloadTurnstileCallback'
 
+  # Optional: Default data-* attributes applied to every `cloudflare_turnstile_tag`.
+  # These are merged into each widget and can be overridden per tag via the `data:` option.
+  # See https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configuration-options
+  # Values may be a proc, evaluated at render time (e.g. to follow the current locale).
+  # config.default_data = {
+  #   theme: 'auto',
+  #   language: -> { I18n.locale }
+  # }
+
   # In the Rails Test environment, automatically fill in a dummy response if none was provided.
   # This lets you keep existing controller tests without having to add
   # params["cf-turnstile-response"] manually in every test.

@@ -7,7 +7,7 @@ module Cloudflare
         def cloudflare_turnstile_tag(site_key: nil, include_script: true, **html_options) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength
           site_key ||= Rails.configuration.site_key
           html_options[:class] = Cloudflare::WIDGET_CLASS unless html_options.key?(:class)
-          html_options[:data] ||= {}
+          html_options[:data] = cloudflare_turnstile_default_data.merge(html_options[:data] || {})
           html_options[:data][:sitekey] ||= site_key
 
           script_tag = nil
@@ -26,6 +26,16 @@ module Cloudflare
 
           widget = content_tag(:div, '', html_options)
           safe_join([script_tag, widget].compact, "\n")
+        end
+
+        private
+
+        # Resolves the configured default data attributes, evaluating any
+        # callable values (e.g. a proc bound to I18n.locale) at render time.
+        def cloudflare_turnstile_default_data
+          (Rails.configuration.default_data || {}).transform_values do |value|
+            value.respond_to?(:call) ? value.call : value
+          end
         end
       end
     end
