@@ -14,6 +14,7 @@ module Cloudflare
             c.site_key = 'SITEKEY'
             c.secret_key = 'SECRETKEY'
             c.script_url = 'https://example.com/api.js'
+            c.default_data = {}
           end
         end
 
@@ -78,6 +79,46 @@ module Cloudflare
           html = cloudflare_turnstile_tag(site_key: 'OVERRIDE')
 
           assert_match(/data-sitekey="OVERRIDE"/, html)
+        end
+
+        test 'configured default_data is applied to the widget' do
+          Rails.configuration.default_data = { theme: 'light', language: 'en' }
+
+          html = cloudflare_turnstile_tag
+
+          assert_match(/data-theme="light"/, html)
+          assert_match(/data-language="en"/, html)
+          assert_match(/data-sitekey="SITEKEY"/, html)
+        end
+
+        test 'per-tag data overrides configured default_data' do
+          Rails.configuration.default_data = { theme: 'light', language: 'en' }
+
+          html = cloudflare_turnstile_tag(data: { theme: 'dark' })
+
+          # overridden key wins
+          assert_match(/data-theme="dark"/, html)
+          # non-overridden default is preserved
+          assert_match(/data-language="en"/, html)
+        end
+
+        test 'callable default_data values are evaluated at render time' do
+          Rails.configuration.default_data = { language: -> { 'fr' } }
+
+          html = cloudflare_turnstile_tag
+
+          assert_match(/data-language="fr"/, html)
+        end
+
+        test 'passing nil for a default_data key drops the attribute for that tag' do
+          Rails.configuration.default_data = { theme: 'light', language: 'en' }
+
+          html = cloudflare_turnstile_tag(data: { theme: nil })
+
+          # nil value removes the attribute entirely rather than rendering data-theme=""
+          refute_match(/data-theme=/, html)
+          # other defaults remain untouched
+          assert_match(/data-language="en"/, html)
         end
 
         test 'script tag is only rendered once when called multiple times' do
