@@ -48,9 +48,7 @@ module Cloudflare
 
       module Verification
         def self.verify(response: nil, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-          if (response.nil? || response.strip.empty?) && ::Rails.env.test? && Rails.configuration.auto_populate_response_in_test_env # rubocop:disable Layout/LineLength
-            response = 'dummy-response'
-          end
+          response = 'dummy-response' if auto_populate_test_response?(response)
 
           secret ||= Rails.configuration.secret_key
           if secret.nil? || secret.strip.empty?
@@ -89,6 +87,13 @@ module Cloudflare
 
           VerificationResponse.new(json)
         end
+
+        def self.auto_populate_test_response?(response)
+          (response.nil? || response.strip.empty?) &&
+            ::Rails.env.test? &&
+            Rails.configuration.auto_populate_response_in_test_env
+        end
+        private_class_method :auto_populate_test_response?
       end
     end
   end
