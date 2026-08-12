@@ -5,7 +5,7 @@
 [![Rails](https://img.shields.io/badge/Rails-5.0%20to%208.1-D30001?logo=rubyonrails&logoColor=white)](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/Appraisals)
 [![Test Matrix](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/test.yml?branch=main&label=Test%20Matrix&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
 [![Lint](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/lint.yml?branch=main&label=Lint&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/license/MIT)
 
 Cloudflare Turnstile gem for Ruby on Rails with built-in Turbo and Turbolinks support and CSP compliance.
 
@@ -16,7 +16,7 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 ## Features
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
-* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:load`, `turbo:before-stream-render`, and DOM mutations.
+* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:render` and `turbo:before-stream-render`.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
 * **CSP nonce support**: Honours Rails' `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
@@ -302,9 +302,9 @@ Cloudflare provides dummy sitekeys and secret keys for development and testing. 
 | Sitekey                    | Description                     | Visibility |
 |----------------------------|---------------------------------|------------|
 | `1x00000000000000000000AA` | Always passes                   | visible    |
-| `2x00000000000000000000AB` | Always blocks                   | visible    |
+| `2x00000000000000000000AB` | Always fails                    | visible    |
 | `1x00000000000000000000BB` | Always passes                   | invisible  |
-| `2x00000000000000000000BB` | Always blocks                   | invisible  |
+| `2x00000000000000000000BB` | Always fails                    | invisible  |
 | `3x00000000000000000000FF` | Forces an interactive challenge | visible    |
 
 ### Dummy Secret Keys
@@ -393,10 +393,11 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
 
 ### Setup
 
-Install dependencies, linters, and prepare everything in one step:
+Install the Ruby dependencies, then the JavaScript dependencies used by the ESLint step:
 
 ```bash
 bin/setup
+npm install
 ```
 
 ### Running the Test Suite
@@ -414,13 +415,13 @@ bundle exec appraisal rake test
 
 ### Code Linting
 
-Enforce code style with RuboCop (latest Ruby only):
+Run RuboCop and ESLint together (autocorrecting by default, or pass `--no-fix` to only report):
 
 ```bash
-bundle exec rubocop
+bin/lint
 ```
 
-> **CI Note:** We run this via [.github/workflows/lint.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/lint.yml) on the latest Ruby only.
+> **CI Note:** We run `bin/lint --no-fix` via [.github/workflows/lint.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/lint.yml) on the latest Ruby only.
 
 ### Generating Rails Apps Locally
 
@@ -461,4 +462,4 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/vkonon
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+The gem is available as open source under the terms of the [MIT License](https://opensource.org/license/MIT).
