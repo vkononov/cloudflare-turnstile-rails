@@ -1119,6 +1119,34 @@ describe('form-interaction trigger', () => {
 
     expect(render).toHaveBeenCalledWith(el);
   });
+
+  test('still fires for a form that arrives after every earlier widget mounted', async () => {
+    // The form listener short-circuits on an internal pending count so that
+    // pointerover doesn't walk the DOM forever once everything has mounted.
+    // That count has to climb back up when a new placeholder shows up, or a
+    // Turbo-delivered form would silently lose the trigger.
+    const first = placeholder();
+    bootHelper();
+    win.cfTurnstile.mountAll();
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledWith(first);
+    expect(render).toHaveBeenCalledTimes(1);
+
+    // Interact while the count is zero. A listener that unsubscribed itself
+    // here instead of short-circuiting would pass every other test in this
+    // block and still break the Turbo case below.
+    fireOn(doc.body, 'focusin');
+    fireOn(doc.body, 'pointerover');
+
+    const { input, el } = formWithWidget();
+    await flushMicrotasks();
+
+    fireOn(input, 'focusin');
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledWith(el);
+  });
 });
 
 describe('space reservation (CLS)', () => {

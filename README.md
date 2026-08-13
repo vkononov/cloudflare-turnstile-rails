@@ -221,7 +221,7 @@ overridden.
 
 The reservation is skipped when:
 
-* you set `class: nil` (signalling that you'll handle styling yourself),
+* the widget doesn't carry the `cf-turnstile` class — either `class: nil` or a custom class, both of which keep the helper from mounting it, so there'd be nothing to apply or release the reservation,
 * the resolved mode isn't `lazy` (in `eager` and `passive` mode the iframe is on its way before the first paint), or
 * you turn it off — globally with `config.reserve_space = false`, or per tag with `cloudflare_turnstile_tag reserve_space: false`.
 

@@ -63,19 +63,28 @@ module Cloudflare
         # everywhere.
         #
         # Skipped when:
-        #   * we're not lazy mounting (the iframe is already on its way),
-        #   * reservation is switched off globally (config.reserve_space) or
-        #     for this tag (reserve_space: false) — which is what you want for
-        #     an invisible sitekey, since an invisible widget occupies no
-        #     space at all, or
-        #   * the caller passed `class: nil`, signalling that they're taking
-        #     over the widget's styling.
+        #   * Configuration#reserve_space? says no — either we're not lazy
+        #     mounting (the iframe is already on its way), or reservation is
+        #     switched off globally or for this tag, which is what you want for
+        #     an invisible sitekey since an invisible widget occupies no space
+        #     at all, or
+        #   * the widget doesn't carry the class the helper script mounts on,
+        #     because then the gem isn't the one rendering it.
         def reserve_turnstile_space(html_options, config, reserve_space)
-          return unless config.effective_mount_mode == :lazy
-          return unless reserve_space.nil? ? config.reserve_space : reserve_space
-          return if html_options[:class].nil?
+          return unless config.reserve_space?(reserve_space)
+          return unless turnstile_widget_class?(html_options)
 
           html_options[:data][:reserve_height] = turnstile_reservation_height(html_options)
+        end
+
+        # The helper script only observes (and therefore only reserves space
+        # for) elements matching `.cf-turnstile`. Overriding the class — with
+        # `class: nil` to take over styling, or with a custom class to keep the
+        # gem's mounting machinery away from a widget you render yourself — opts
+        # out of both. Emitting a reservation for one of those would be inert
+        # and misleading, since nothing would ever apply or release it.
+        def turnstile_widget_class?(html_options)
+          Array(html_options[:class]).join(' ').split.include?(Cloudflare::WIDGET_CLASS)
         end
 
         # Returns the px height to reserve for the configured widget size.

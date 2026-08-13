@@ -5,10 +5,6 @@ module Cloudflare
   module Turnstile
     module Rails
       class Configuration
-        # The three mounting modes the JavaScript helper understands. See
-        # #effective_mount_mode for how a configuration resolves to one.
-        MOUNT_MODES = %i[lazy eager passive].freeze
-
         attr_writer :script_url
         attr_accessor :site_key, :secret_key, :render, :onload, :default_data, :lazy_mount, :manual_render,
                       :reserve_space, :auto_populate_response_in_test_env
@@ -81,11 +77,21 @@ module Cloudflare
           lazy_mount && !manual_render && !explicit_render?
         end
 
+        # Whether to reserve vertical space for a widget, to absorb the layout
+        # shift when Cloudflare swaps the iframe in.
+        #
         # Space is only worth reserving in :lazy mode — in the other modes the
         # iframe is on its way before the first paint, so there is no shift to
         # absorb.
-        def reserve_space?
-          reserve_space && effective_mount_mode == :lazy
+        #
+        # `override` carries the per-tag `reserve_space:` option, where nil
+        # means "the caller didn't say" and the global setting decides. This is
+        # the single source of truth for the rule: the view helper asks rather
+        # than reimplementing it, so the two can't drift apart.
+        def reserve_space?(override = nil)
+          return false unless effective_mount_mode == :lazy
+
+          override.nil? ? reserve_space : override
         end
 
         # Dynamically build the URL every time, so that

@@ -202,6 +202,31 @@ module Cloudflare
 
           refute_predicate @config, :reserve_space?
         end
+
+        def test_reserve_space_per_tag_override_wins_over_the_global_setting
+          @config.reserve_space = false
+
+          assert @config.reserve_space?(true), 'reserve_space: true should re-enable reservation for one tag'
+
+          @config.reserve_space = true
+
+          refute @config.reserve_space?(false), 'reserve_space: false should disable reservation for one tag'
+        end
+
+        def test_reserve_space_override_cannot_resurrect_a_non_lazy_mode
+          @config.lazy_mount = false
+
+          refute @config.reserve_space?(true),
+                 'there is no layout shift to absorb outside lazy mode, whatever the caller asks for'
+        end
+
+        def test_nil_reserve_space_override_defers_to_the_global_setting
+          assert @config.reserve_space?(nil)
+
+          @config.reserve_space = false
+
+          refute @config.reserve_space?(nil)
+        end
       end
     end
   end

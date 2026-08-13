@@ -208,6 +208,27 @@ module Cloudflare
           refute_match(/data-reserve-height/, html)
         end
 
+        test 'reservation is omitted for a custom class the helper script never mounts' do
+          # The helper only observes `.cf-turnstile`, so nothing would ever
+          # apply or release a reservation on this element. Emitting one would
+          # be inert and misleading.
+          html = cloudflare_turnstile_tag(class: 'my-widget')
+
+          refute_match(/data-reserve-height/, html)
+        end
+
+        test 'reservation still applies when the widget class is one of several' do
+          html = cloudflare_turnstile_tag(class: 'mb-4 cf-turnstile border')
+
+          assert_match(/data-reserve-height="65"/, html)
+        end
+
+        test 'reservation still applies when the class is given as an array' do
+          html = cloudflare_turnstile_tag(class: %w[mb-4 cf-turnstile])
+
+          assert_match(/data-reserve-height="65"/, html)
+        end
+
         test 'reservation is omitted when not lazy mounting' do
           Rails.configuration.lazy_mount = false
           html = cloudflare_turnstile_tag
