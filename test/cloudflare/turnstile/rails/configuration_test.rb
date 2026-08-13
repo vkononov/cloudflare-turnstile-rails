@@ -79,89 +79,96 @@ module Cloudflare
           assert @config.lazy_mount
         end
 
-        def test_render_explicitly_set_sentinel
-          refute_predicate @config, :render_explicitly_set?, 'expected render to start as not-explicitly-set'
-
-          @config.render = 'explicit'
-
-          assert_predicate @config, :render_explicitly_set?, 'expected render= to flip the sentinel'
+        def test_manual_render_defaults_to_false
+          refute @config.manual_render
         end
 
-        def test_lazy_mount_explicitly_set_sentinel
-          refute_predicate @config, :lazy_mount_explicitly_set?, 'expected lazy_mount to start as not-explicitly-set'
-
-          @config.lazy_mount = true
-
-          assert_predicate @config, :lazy_mount_explicitly_set?, 'expected lazy_mount= to flip the sentinel'
+        def test_reserve_space_defaults_to_true
+          assert @config.reserve_space
         end
 
-        def test_effective_lazy_mount_when_render_is_explicit
-          assert @config.effective_lazy_mount
+        def test_explicit_render_is_true_for_the_default_url
+          assert_predicate @config, :explicit_render?
         end
 
-        def test_effective_lazy_mount_disabled_when_render_is_auto
+        def test_explicit_render_is_false_when_render_is_auto
           @config.render = 'auto'
 
-          refute @config.effective_lazy_mount,
-                 'lazy mount should degrade to false when render != explicit'
+          refute_predicate @config, :explicit_render?
         end
 
-        def test_effective_lazy_mount_disabled_when_lazy_mount_is_false
+        def test_explicit_render_is_false_for_a_custom_url_without_the_param
+          # A custom script_url is used verbatim, so config.render never reaches
+          # the URL. Reading @render here would wrongly claim explicit rendering.
+          @config.script_url = 'https://example.com/custom-api.js'
+
+          assert_equal 'explicit', @config.render
+          refute_predicate @config, :explicit_render?,
+                           'explicit_render? must describe the URL we actually load, not config.render'
+        end
+
+        def test_explicit_render_is_true_for_a_custom_url_carrying_the_param
+          @config.script_url = 'https://example.com/custom-api.js?render=explicit&foo=bar'
+
+          assert_predicate @config, :explicit_render?
+        end
+
+        def test_explicit_render_is_false_for_an_unparseable_url
+          @config.script_url = 'https://exa mple.com/api.js'
+
+          refute_predicate @config, :explicit_render?, 'a URL we cannot parse must not be trusted as explicit'
+        end
+
+        def test_effective_mount_mode_defaults_to_lazy
+          assert_equal :lazy, @config.effective_mount_mode
+        end
+
+        def test_effective_mount_mode_is_eager_when_lazy_mount_is_false
           @config.lazy_mount = false
 
-          refute @config.effective_lazy_mount
+          assert_equal :eager, @config.effective_mount_mode,
+                       'disabling lazy mounting must still leave the gem rendering widgets'
         end
 
-        def test_v1_explicit_upgrade_fingerprint_disables_effective_lazy_mount
-          # Mirrors a v1.x app that set config.render = 'explicit' but
-          # never knew about config.lazy_mount (because v2.0 introduced it).
-          @config.render = 'explicit'
-
-          assert_predicate @config, :v1_explicit_upgrade?
-          refute @config.effective_lazy_mount,
-                 'v1.x apps with explicit render should auto-opt-out of lazy mounting'
-        end
-
-        def test_v1_explicit_upgrade_fingerprint_cleared_by_explicit_lazy_mount_true
-          @config.render = 'explicit'
-          @config.lazy_mount = true
-
-          refute_predicate @config, :v1_explicit_upgrade?
-          assert @config.effective_lazy_mount,
-                 'setting lazy_mount = true explicitly opts back into v2 lazy mounting'
-        end
-
-        def test_v1_explicit_upgrade_fingerprint_cleared_by_explicit_lazy_mount_false
-          @config.render = 'explicit'
-          @config.lazy_mount = false
-
-          refute_predicate @config, :v1_explicit_upgrade?
-          refute @config.effective_lazy_mount
-        end
-
-        def test_v1_explicit_upgrade_fingerprint_does_not_apply_to_fresh_install
-          # Defaults only — render is 'explicit' implicitly.
-          refute_predicate @config, :v1_explicit_upgrade?
-          assert @config.effective_lazy_mount,
-                 'fresh installs should still get the v2 default of lazy mounting on'
-        end
-
-        def test_v1_explicit_upgrade_fingerprint_does_not_apply_when_render_is_auto
+        def test_effective_mount_mode_is_eager_when_render_is_auto
           @config.render = 'auto'
 
-          refute_predicate @config, :v1_explicit_upgrade?,
-                           'fingerprint requires render to be the v1.x-explicit string, not auto'
+          assert_equal :eager, @config.effective_mount_mode
         end
 
-        def test_lazy_mount_misconfigured_combo
-          # lazy_mount = true (default) + render = 'auto' is the contradictory pair.
+        def test_effective_mount_mode_is_eager_for_a_custom_url_without_explicit
+          @config.script_url = 'https://example.com/custom-api.js'
+
+          assert_equal :eager, @config.effective_mount_mode
+        end
+
+        def test_effective_mount_mode_is_passive_when_manual_render
+          @config.manual_render = true
+
+          assert_equal :passive, @config.effective_mount_mode
+        end
+
+        def test_manual_render_takes_precedence_over_lazy_mount
+          @config.manual_render = true
+          @config.lazy_mount = true
+
+          assert_equal :passive, @config.effective_mount_mode
+        end
+
+        def test_lazy_mount_misconfigured_when_render_is_auto
           @config.render = 'auto'
 
           assert_predicate @config, :lazy_mount_misconfigured?
         end
 
+        def test_lazy_mount_misconfigured_for_a_custom_url_without_explicit
+          @config.script_url = 'https://example.com/custom-api.js'
+
+          assert_predicate @config, :lazy_mount_misconfigured?,
+                           'a custom URL that omits render=explicit silently breaks lazy mounting, so warn'
+        end
+
         def test_lazy_mount_not_misconfigured_when_explicit
-          assert_equal 'explicit', @config.render
           refute_predicate @config, :lazy_mount_misconfigured?
         end
 
@@ -171,6 +178,29 @@ module Cloudflare
 
           refute_predicate @config, :lazy_mount_misconfigured?,
                            'disabling lazy_mount should also clear the misconfiguration flag'
+        end
+
+        def test_lazy_mount_not_misconfigured_when_rendering_manually
+          @config.manual_render = true
+          @config.render = 'auto'
+
+          refute_predicate @config, :lazy_mount_misconfigured?,
+                           'manual_render opts out of mounting entirely, so lazy_mount is moot'
+        end
+
+        def test_reserve_space_only_applies_in_lazy_mode
+          assert_predicate @config, :reserve_space?
+
+          @config.lazy_mount = false
+
+          refute_predicate @config, :reserve_space?,
+                           'eager mode has the iframe on its way before first paint, so there is no shift'
+        end
+
+        def test_reserve_space_can_be_switched_off
+          @config.reserve_space = false
+
+          refute_predicate @config, :reserve_space?
         end
       end
     end

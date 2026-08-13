@@ -11,6 +11,15 @@
 </div>
 
 <%= form_with url: lazy_demo_path, method: :post, id: 'lazy-demo-form' do %>
+  <%# Focusing this field is enough to mount the widget: interacting with any
+      field in the widget's own form is the strongest possible signal that the
+      user is about to submit, so the helper mounts eagerly rather than waiting
+      for the IntersectionObserver. %>
+  <div>
+    <%= label_tag :message, 'Message' %>
+    <%= text_field_tag :message, nil, id: 'lazy-demo-message' %>
+  </div>
+
   <%= cloudflare_turnstile_tag %>
 
   <div>

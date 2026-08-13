@@ -10,12 +10,14 @@ module Cloudflare
         tests Helpers
 
         setup do
-          # Reset configuration so each test starts from defaults.
+          # Reset configuration so each test starts from defaults. The custom
+          # script_url carries render=explicit so that the default mount mode
+          # stays :lazy — see Configuration#explicit_render?.
           Rails.configuration = Configuration.new
           Rails.configure do |c|
             c.site_key = 'SITEKEY'
             c.secret_key = 'SECRETKEY'
-            c.script_url = 'https://example.com/api.js'
+            c.script_url = 'https://example.com/api.js?render=explicit'
             c.default_data = {}
           end
         end
@@ -24,7 +26,7 @@ module Cloudflare
           html = cloudflare_turnstile_tag
 
           assert_match(/<script[^>]+src="[^"]*cloudflare_turnstile_helper\.js"[^>]*>/, html)
-          assert_match %r{data-script-url="https://example\.com/api\.js"}, html
+          assert_match %r{data-script-url="https://example\.com/api\.js\?render=explicit"}, html
           assert_match(/<div[^>]+class="cf-turnstile"[^>]+data-sitekey="SITEKEY"/, html)
         end
 
@@ -126,76 +128,120 @@ module Cloudflare
           assert_match(/<div[^>]+class="cf-turnstile"/, second_html)
         end
 
-        test 'script tag carries data-lazy-mount=true when lazy_mount is in effect' do
+        test 'script tag carries data-mount-mode=lazy by default' do
           html = cloudflare_turnstile_tag
 
-          assert_match(/<script[^>]+data-lazy-mount="true"/, html)
+          assert_match(/<script[^>]+data-mount-mode="lazy"/, html)
         end
 
-        test 'script tag carries data-lazy-mount=false when lazy_mount is disabled' do
+        test 'script tag carries data-mount-mode=eager when lazy_mount is disabled' do
           Rails.configuration.lazy_mount = false
           html = cloudflare_turnstile_tag
 
-          assert_match(/<script[^>]+data-lazy-mount="false"/, html)
+          assert_match(/<script[^>]+data-mount-mode="eager"/, html)
         end
 
-        test 'script tag carries data-lazy-mount=false when render is auto (combo-4 misconfig)' do
-          # lazy_mount = true (default) + render = 'auto' is invalid; the helper
-          # forwards effective_lazy_mount, which degrades to false.
+        test 'script tag carries data-mount-mode=eager when render is auto' do
+          Rails.configuration.script_url = Cloudflare::SCRIPT_URL
           Rails.configuration.render = 'auto'
           html = cloudflare_turnstile_tag
 
-          assert_match(/<script[^>]+data-lazy-mount="false"/, html)
+          assert_match(/<script[^>]+data-mount-mode="eager"/, html)
         end
 
-        test 'widget div carries a min-height style by default to prevent layout shift' do
+        test 'script tag carries data-mount-mode=eager when a custom url omits render=explicit' do
+          Rails.configuration.script_url = 'https://example.com/api.js'
           html = cloudflare_turnstile_tag
 
-          assert_match(/<div[^>]+style="min-height: 65px"/, html)
+          assert_match(/<script[^>]+data-mount-mode="eager"/, html)
         end
 
-        test 'min-height is omitted when caller supplies their own style' do
+        test 'script tag carries data-mount-mode=passive when manual_render is set' do
+          Rails.configuration.manual_render = true
+          html = cloudflare_turnstile_tag
+
+          assert_match(/<script[^>]+data-mount-mode="passive"/, html)
+        end
+
+        test 'widget div reserves height via a data attribute to prevent layout shift' do
+          html = cloudflare_turnstile_tag
+
+          assert_match(/<div[^>]+data-reserve-height="65"/, html)
+        end
+
+        test 'no inline style attribute is emitted, so no style-src-attr unsafe-inline is needed' do
+          html = cloudflare_turnstile_tag
+
+          refute_match(/style=/, html,
+                       'an inline style attribute would require unsafe-inline and break strict CSP')
+        end
+
+        test 'reserved height is 120 for compact widgets to match the Cloudflare iframe' do
+          html = cloudflare_turnstile_tag(data: { size: 'compact' })
+
+          assert_match(/data-reserve-height="120"/, html)
+        end
+
+        test 'reserved height is 65 for explicit normal and flexible sizes' do
+          assert_match(/data-reserve-height="65"/, cloudflare_turnstile_tag(data: { size: 'normal' }))
+          assert_match(/data-reserve-height="65"/, cloudflare_turnstile_tag(data: { size: 'flexible' }))
+        end
+
+        test 'a literal data-size html option also drives the reservation' do
+          html = cloudflare_turnstile_tag('data-size': 'compact')
+
+          assert_match(/data-reserve-height="120"/, html)
+        end
+
+        test 'a caller-supplied style is left alone and still gets a reservation' do
+          # The reservation is applied from JavaScript now, so it no longer
+          # competes with the caller's own style attribute.
           html = cloudflare_turnstile_tag(style: 'width: 300px')
 
           assert_match(/style="width: 300px"/, html)
-          refute_match(/min-height/, html)
+          assert_match(/data-reserve-height="65"/, html)
         end
 
-        test 'min-height is omitted when class is explicitly nil' do
+        test 'reservation is omitted when class is explicitly nil' do
           html = cloudflare_turnstile_tag(class: nil)
 
-          refute_match(/min-height/, html)
+          refute_match(/data-reserve-height/, html)
         end
 
-        test 'min-height is omitted for invisible widgets via data: hash' do
-          html = cloudflare_turnstile_tag(data: { size: 'invisible' })
-
-          refute_match(/min-height/, html)
-          assert_match(/data-size="invisible"/, html)
-        end
-
-        test 'min-height is 120px for compact widgets to match Cloudflare iframe height' do
-          html = cloudflare_turnstile_tag(data: { size: 'compact' })
-
-          assert_match(/style="min-height: 120px"/, html)
-        end
-
-        test 'min-height is 65px for explicit normal/flexible sizes' do
-          assert_match(/style="min-height: 65px"/, cloudflare_turnstile_tag(data: { size: 'normal' }))
-          assert_match(/style="min-height: 65px"/, cloudflare_turnstile_tag(data: { size: 'flexible' }))
-        end
-
-        test 'data-size: literal html option also drives the reservation' do
-          html = cloudflare_turnstile_tag('data-size': 'compact')
-
-          assert_match(/style="min-height: 120px"/, html)
-        end
-
-        test 'min-height is omitted when lazy_mount is disabled' do
+        test 'reservation is omitted when not lazy mounting' do
           Rails.configuration.lazy_mount = false
           html = cloudflare_turnstile_tag
 
-          refute_match(/min-height/, html)
+          refute_match(/data-reserve-height/, html)
+        end
+
+        test 'reservation is omitted when config.reserve_space is false' do
+          # The supported escape hatch for an invisible sitekey, which occupies
+          # no space and therefore needs none reserved.
+          Rails.configuration.reserve_space = false
+          html = cloudflare_turnstile_tag
+
+          refute_match(/data-reserve-height/, html)
+        end
+
+        test 'reservation is omitted for a single tag via reserve_space: false' do
+          html = cloudflare_turnstile_tag(reserve_space: false)
+
+          refute_match(/data-reserve-height/, html)
+          assert_match(/class="cf-turnstile"/, html)
+        end
+
+        test 'reserve_space: true re-enables reservation for one tag when disabled globally' do
+          Rails.configuration.reserve_space = false
+          html = cloudflare_turnstile_tag(reserve_space: true)
+
+          assert_match(/data-reserve-height="65"/, html)
+        end
+
+        test 'reserve_space is not emitted as a data attribute on the widget' do
+          html = cloudflare_turnstile_tag(reserve_space: false)
+
+          refute_match(/reserve-space/, html)
         end
       end
     end

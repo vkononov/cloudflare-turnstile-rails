@@ -20,15 +20,15 @@ Gem::Specification.new do |spec|
     Thanks for installing cloudflare-turnstile-rails #{Cloudflare::Turnstile::Rails::VERSION}!
 
     v2.0 introduced lazy mounting for the Turnstile widget. The widget no
-    longer renders until it scrolls into view (or the user touches/clicks/
-    types anywhere on the page), and api.js is no longer fetched on every
-    page load. config.render now defaults to 'explicit' to make this safe.
+    longer renders until it is needed (scrolled near, its form touched, or
+    revealed from a modal), and api.js is no longer fetched on every page
+    load. config.render now defaults to 'explicit' to make this safe.
 
-    Most apps need no changes. If your v1.x config already had
-    config.render = 'explicit' (and you were calling turnstile.render()
-    from your own JavaScript), the gem now detects that fingerprint at
-    boot and keeps lazy mounting OFF for you so your existing code keeps
-    working. To opt into v2 lazy mounting, set config.lazy_mount = true.
+    Most apps need no changes. If you call turnstile.render() from your
+    own JavaScript, set config.manual_render = true: the gem will load
+    api.js for you and render nothing, so your existing code keeps
+    working. To get the v1.x eager rendering from the gem itself instead,
+    set config.lazy_mount = false.
 
     Full upgrade guide:
 

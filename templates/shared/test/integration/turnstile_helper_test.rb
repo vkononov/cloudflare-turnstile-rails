@@ -17,16 +17,18 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Several tests below mutate `lazy_mount` and `render` to verify
-  # opt-out paths. Without restoring defaults afterwards those mutated
-  # values would bleed into other test files (e.g. the system tests),
-  # which would suddenly see `data-lazy-mount="false"` in the helper
-  # script and never auto-mount their widgets. Process-wide config means
-  # process-wide cleanup.
+  # Several tests below mutate `lazy_mount`, `manual_render` and `render`
+  # to verify opt-out paths. Without restoring defaults afterwards those
+  # mutated values would bleed into other test files (e.g. the system
+  # tests), which would suddenly see `data-mount-mode="eager"` in the
+  # helper script and never lazily mount their widgets. Process-wide
+  # config means process-wide cleanup.
   teardown do
     Cloudflare::Turnstile::Rails.configure do |config|
       config.render = 'explicit'
       config.lazy_mount = true
+      config.manual_render = false
+      config.reserve_space = true
     end
   end
 
@@ -34,7 +36,7 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
     get new_contact_url
 
     assert_response :success
-    assert_select 'script[data-lazy-mount="true"]', count: 1
+    assert_select 'script[data-mount-mode="lazy"]', count: 1
     assert_select 'script[data-script-url*=?]', 'render=explicit', count: 1
     assert_select 'script[async][defer]', count: 1
   end
@@ -43,7 +45,24 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
     get new_contact_url
 
     assert_response :success
-    assert_select 'div.cf-turnstile[style*=?]', 'min-height', count: 1
+    assert_select 'div.cf-turnstile[data-reserve-height="65"]', count: 1
+  end
+
+  test 'the reservation needs no inline style, so strict CSP needs no style-src-attr' do
+    get new_contact_url
+
+    assert_response :success
+    assert_select 'div.cf-turnstile[style]', count: 0
+  end
+
+  test 'the CLS reservation can be switched off for space-less sitekeys' do
+    Cloudflare::Turnstile::Rails.configuration.reserve_space = false
+
+    get new_contact_url
+
+    assert_response :success
+    assert_select 'div.cf-turnstile', count: 1
+    assert_select 'div.cf-turnstile[data-reserve-height]', count: 0
   end
 
   test 'multiple widgets on one page share a single helper script tag' do
@@ -51,28 +70,37 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'div.cf-turnstile', count: 2
-    assert_select 'script[data-lazy-mount]', count: 1
+    assert_select 'script[data-mount-mode]', count: 1
   end
 
-  test 'opting out of lazy mount disables both the data flag and CLS reservation' do
+  test 'opting out of lazy mount switches to eager mode and drops the CLS reservation' do
     Cloudflare::Turnstile::Rails.configuration.lazy_mount = false
 
     get new_contact_url
 
     assert_response :success
-    assert_select 'script[data-lazy-mount="false"]', count: 1
-    # No min-height when lazy mounting is off; the iframe will mount
-    # immediately so there is nothing to reserve space for.
-    assert_select 'div.cf-turnstile[style*=?]', 'min-height', count: 0
+    assert_select 'script[data-mount-mode="eager"]', count: 1
+    # Nothing to reserve when the iframe mounts before the first paint.
+    assert_select 'div.cf-turnstile[data-reserve-height]', count: 0
   end
 
-  test "render='auto' disables effective lazy mount and drops render=explicit from the script URL" do
+  test 'manual_render puts the gem in passive mode' do
+    Cloudflare::Turnstile::Rails.configuration.manual_render = true
+
+    get new_contact_url
+
+    assert_response :success
+    assert_select 'script[data-mount-mode="passive"]', count: 1
+    assert_select 'div.cf-turnstile[data-reserve-height]', count: 0
+  end
+
+  test "render='auto' falls back to eager mode and drops render=explicit from the script URL" do
     Cloudflare::Turnstile::Rails.configuration.render = 'auto'
 
     get new_contact_url
 
     assert_response :success
-    assert_select 'script[data-lazy-mount="false"]', count: 1
+    assert_select 'script[data-mount-mode="eager"]', count: 1
     assert_select 'script[data-script-url*=?]', 'render=auto', count: 1
   end
 

@@ -1,78 +1,91 @@
+require 'cgi'
+require 'uri'
+
 module Cloudflare
   module Turnstile
     module Rails
       class Configuration
+        # The three mounting modes the JavaScript helper understands. See
+        # #effective_mount_mode for how a configuration resolves to one.
+        MOUNT_MODES = %i[lazy eager passive].freeze
+
         attr_writer :script_url
-        # NOTE: :render is deliberately absent here — it has a custom writer
-        # (below) that records whether the host app set it explicitly.
-        attr_accessor :site_key, :secret_key, :onload, :default_data, :auto_populate_response_in_test_env
+        attr_accessor :site_key, :secret_key, :render, :onload, :default_data, :lazy_mount, :manual_render,
+                      :reserve_space, :auto_populate_response_in_test_env
 
         def initialize
           @script_url = Cloudflare::SCRIPT_URL
           @site_key = nil
           @secret_key = nil
           @render = 'explicit'
-          @render_explicitly_set = false
           @onload = nil
           @lazy_mount = true
-          @lazy_mount_explicitly_set = false
+          @manual_render = false
+          @reserve_space = true
           @default_data = {}
           @auto_populate_response_in_test_env = true
         end
 
-        attr_reader :render, :lazy_mount
-
-        def render=(value)
-          @render = value
-          @render_explicitly_set = true
-        end
-
-        def lazy_mount=(value)
-          @lazy_mount = value
-          @lazy_mount_explicitly_set = true
-        end
-
-        def render_explicitly_set?
-          @render_explicitly_set
-        end
-
-        def lazy_mount_explicitly_set?
-          @lazy_mount_explicitly_set
-        end
-
-        # The fingerprint of a v1.x app upgrading to v2.0: the user set
-        # `config.render = 'explicit'` (presumably because they were calling
-        # `turnstile.render()` from their own JavaScript) but never touched
-        # `config.lazy_mount` (which v2.0 introduced and defaults to true).
+        # True when the api.js URL we are actually going to load carries
+        # `render=explicit`.
         #
-        # Treating that as an automatic opt-out preserves the v1.x behaviour
-        # — eager load, manual render — instead of silently flipping their
-        # working app over to lazy mounting that would race their manual
-        # render() calls. The companion warning in Railtie nudges them to
-        # make their intent explicit.
-        def v1_explicit_upgrade?
-          @render_explicitly_set && !@lazy_mount_explicitly_set && @render == 'explicit'
+        # This is deliberately derived from the resolved #script_url rather
+        # than from @render, because a custom `config.script_url` is used
+        # verbatim and never has render/onload appended. Reading @render would
+        # claim explicit rendering for a URL that doesn't ask for it, leaving
+        # Cloudflare's auto-render observer to mount every widget the moment
+        # api.js arrives — silently defeating lazy mounting and risking a
+        # double render (Turnstile error 300030).
+        def explicit_render?
+          query = URI.parse(script_url).query
+          return false if query.nil?
+
+          URI.decode_www_form(query).any? { |key, value| key == 'render' && value == 'explicit' }
+        rescue URI::InvalidURIError, ArgumentError
+          # A URL we can't parse is a URL we can't vouch for. Treating it as
+          # non-explicit is the safe direction: the gem falls back to eager
+          # mounting and warns, rather than lazily deferring widgets that
+          # Cloudflare may already be rendering.
+          false
         end
 
-        # The lazy-mount machinery only does something useful when:
+        # Resolves the configuration into the one mode the helper script runs in:
         #
-        #   * api.js is served with ?render=explicit (otherwise Cloudflare's
-        #     own auto-render observer mounts every widget the moment api.js
-        #     arrives, defeating per-widget lazy triggers), AND
-        #   * we're not looking at a v1.x app where the user is rendering
-        #     widgets themselves (see v1_explicit_upgrade?).
+        #   :lazy    - the gem renders widgets, deferred until each one is
+        #              actually needed (scrolled near, form interacted with,
+        #              revealed, or mounted by hand).
+        #   :eager   - the gem renders every widget as soon as api.js is ready
+        #              and keeps doing so across Turbo navigations and DOM
+        #              mutations. This is v1.x behaviour.
+        #   :passive - the gem loads api.js and renders nothing at all; the
+        #              host app calls turnstile.render() itself.
         #
-        # When either condition fails, lazy mounting is degraded to false
-        # transparently and the helper script falls back to v1-style eager
-        # load.
-        def effective_lazy_mount
-          return false if v1_explicit_upgrade?
+        # Note that :eager, not :passive, is the fallback when the URL isn't
+        # explicit. With Cloudflare auto-rendering, our sweep is a guarded
+        # no-op for widgets it already handled (see isAlreadyMounted in the
+        # helper) but still covers ones it missed — same belt-and-braces
+        # arrangement v1.x shipped.
+        def effective_mount_mode
+          return :passive if manual_render
+          return :eager unless explicit_render?
+          return :eager unless lazy_mount
 
-          @lazy_mount && render == 'explicit'
+          :lazy
         end
 
+        # Lazy mounting needs `render=explicit` to mean anything: without it
+        # Cloudflare mounts everything up front and there is nothing left to
+        # defer. Catches both `config.render = 'auto'` and a custom
+        # `config.script_url` that omits the parameter.
         def lazy_mount_misconfigured?
-          @lazy_mount && render != 'explicit'
+          lazy_mount && !manual_render && !explicit_render?
+        end
+
+        # Space is only worth reserving in :lazy mode — in the other modes the
+        # iframe is on its way before the first paint, so there is no shift to
+        # absorb.
+        def reserve_space?
+          reserve_space && effective_mount_mode == :lazy
         end
 
         # Dynamically build the URL every time, so that
@@ -80,6 +93,7 @@ module Cloudflare
         def script_url
           return @script_url unless @script_url == Cloudflare::SCRIPT_URL
 
+          # Otherwise, append render/onload if present:
           params = []
           params << "render=#{CGI.escape(@render)}" unless @render.nil?
           params << "onload=#{CGI.escape(@onload)}" unless @onload.nil?

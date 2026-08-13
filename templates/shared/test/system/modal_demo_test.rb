@@ -14,6 +14,8 @@ class ModalDemoTest < ApplicationSystemTestCase
       config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA')
       config.render = 'explicit'
       config.lazy_mount = true
+      config.manual_render = false
+      config.reserve_space = true
     end
   end
 

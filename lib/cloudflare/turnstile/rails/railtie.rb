@@ -32,34 +32,20 @@ module Cloudflare
         def self.emit_upgrade_warnings
           # Use ::Cloudflare to avoid colliding with the nested constants module
           # at Cloudflare::Turnstile::Rails::Cloudflare.
-          config = ::Cloudflare::Turnstile::Rails.configuration
-          warn_v1_explicit_upgrade(config)
-          warn_lazy_mount_misconfiguration(config)
-        end
-
-        def self.warn_v1_explicit_upgrade(config)
-          return unless config.v1_explicit_upgrade?
-
-          ::Rails.logger&.warn(
-            "[cloudflare-turnstile-rails] config.render = 'explicit' is set without a " \
-            'config.lazy_mount setting (the v1.x -> v2.0 upgrade fingerprint). ' \
-            'Lazy mounting has been disabled automatically to keep manual ' \
-            'turnstile.render() calls from v1.x working. To opt into v2 lazy mounting, ' \
-            'set config.lazy_mount = true. To silence this notice without changing ' \
-            "behaviour, set config.lazy_mount = false. See: #{UPGRADE_GUIDE_URL}"
-          )
+          warn_lazy_mount_misconfiguration(::Cloudflare::Turnstile::Rails.configuration)
         end
 
         def self.warn_lazy_mount_misconfiguration(config)
           return unless config.lazy_mount_misconfigured?
 
           ::Rails.logger&.warn(
-            '[cloudflare-turnstile-rails] config.lazy_mount = true requires ' \
-            "config.render = 'explicit' to take effect. Cloudflare's auto-render " \
-            'observer will mount every widget as soon as api.js arrives, so the ' \
-            'lazy-mount triggers cannot work. Either set config.render = ' \
-            "'explicit' (recommended) or set config.lazy_mount = false to silence " \
-            "this notice. See: #{UPGRADE_GUIDE_URL}"
+            '[cloudflare-turnstile-rails] config.lazy_mount = true needs an api.js URL ' \
+            "carrying render=explicit, but #{config.script_url} does not. Cloudflare's " \
+            'auto-render observer will mount every widget as soon as api.js arrives, so ' \
+            'the lazy-mount triggers have nothing left to defer. The gem has fallen back ' \
+            'to eager mounting. Either drop the override so render=explicit is applied ' \
+            '(recommended), add render=explicit to your config.script_url, or set ' \
+            "config.lazy_mount = false to silence this notice. See: #{UPGRADE_GUIDE_URL}"
           )
         end
       end

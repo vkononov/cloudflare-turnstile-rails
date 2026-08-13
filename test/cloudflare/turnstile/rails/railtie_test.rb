@@ -52,55 +52,64 @@ module Cloudflare
           assert_includes ActionView::Base.included_modules, Helpers
         end
 
-        test 'emits v1-explicit upgrade warning when render=explicit is the only thing set' do
-          # Fingerprint of a v1.x app that already had config.render = 'explicit'.
-          ::Cloudflare::Turnstile::Rails.configuration.render = 'explicit'
+        test 'stays quiet on a fresh install, where render=explicit is the default' do
           io = capture_logger_output do
             Railtie.emit_upgrade_warnings
           end
 
-          assert_match(/upgrade fingerprint/, io.string)
-          assert_match(/Lazy mounting has been disabled/, io.string)
+          assert_empty io.string, 'a default configuration is not misconfigured and should log nothing'
+        end
+
+        test 'warns when lazy_mount is on but render=auto leaves it nothing to defer' do
+          ::Cloudflare::Turnstile::Rails.configuration.render = 'auto'
+          io = capture_logger_output do
+            Railtie.emit_upgrade_warnings
+          end
+
+          assert_match(/needs an api\.js URL carrying render=explicit/, io.string)
           assert_match(%r{github\.com/vkononov/cloudflare-turnstile-rails}, io.string)
         end
 
-        test 'does not emit v1 upgrade warning on a fresh v2 install' do
-          # Defaults only — render is 'explicit' implicitly, lazy_mount is true implicitly.
+        test 'warns when a custom script_url silently omits render=explicit' do
+          # The URL is what actually reaches Cloudflare, so a custom one that
+          # drops the parameter breaks lazy mounting just as surely as
+          # render='auto' does — and used to do it without a word.
+          ::Cloudflare::Turnstile::Rails.configuration.script_url = 'https://example.com/api.js'
           io = capture_logger_output do
             Railtie.emit_upgrade_warnings
           end
 
-          refute_match(/upgrade fingerprint/, io.string,
-                       'fresh installs should not see the upgrade warning')
+          assert_match(/needs an api\.js URL carrying render=explicit/, io.string)
+          assert_match(%r{https://example\.com/api\.js}, io.string, 'the offending URL should be named')
         end
 
-        test 'does not emit v1 upgrade warning when lazy_mount has been explicitly set' do
-          ::Cloudflare::Turnstile::Rails.configuration.render = 'explicit'
-          ::Cloudflare::Turnstile::Rails.configuration.lazy_mount = false
+        test 'stays quiet when a custom script_url carries render=explicit' do
+          ::Cloudflare::Turnstile::Rails.configuration.script_url = 'https://example.com/api.js?render=explicit'
           io = capture_logger_output do
             Railtie.emit_upgrade_warnings
           end
 
-          refute_match(/upgrade fingerprint/, io.string)
+          assert_empty io.string
         end
 
-        test 'emits combo-4 misconfiguration warning when render=auto with default lazy_mount' do
-          ::Cloudflare::Turnstile::Rails.configuration.render = 'auto'
-          io = capture_logger_output do
-            Railtie.emit_upgrade_warnings
-          end
-
-          assert_match(/lazy_mount = true requires/, io.string)
-        end
-
-        test 'does not emit combo-4 warning when lazy_mount is disabled alongside render=auto' do
+        test 'does not warn when lazy_mount is disabled alongside render=auto' do
           ::Cloudflare::Turnstile::Rails.configuration.render = 'auto'
           ::Cloudflare::Turnstile::Rails.configuration.lazy_mount = false
           io = capture_logger_output do
             Railtie.emit_upgrade_warnings
           end
 
-          refute_match(/lazy_mount = true requires/, io.string)
+          assert_empty io.string
+        end
+
+        test 'does not warn when the host app renders widgets itself' do
+          ::Cloudflare::Turnstile::Rails.configuration.manual_render = true
+          ::Cloudflare::Turnstile::Rails.configuration.render = 'auto'
+          io = capture_logger_output do
+            Railtie.emit_upgrade_warnings
+          end
+
+          assert_empty io.string
         end
 
         private

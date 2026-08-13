@@ -9,6 +9,8 @@ class LazyMountTest < ApplicationSystemTestCase
       config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA')
       config.render = 'explicit'
       config.lazy_mount = true
+      config.manual_render = false
+      config.reserve_space = true
     end
   end
 
@@ -48,12 +50,16 @@ class LazyMountTest < ApplicationSystemTestCase
         return {
           ensureLoaded: typeof window.cfTurnstile.ensureLoaded,
           mount: typeof window.cfTurnstile.mount,
-          mountAll: typeof window.cfTurnstile.mountAll
+          mountAll: typeof window.cfTurnstile.mountAll,
+          mountMode: window.cfTurnstile.mountMode
         };
       })()
     JS
 
-    assert_equal({ 'ensureLoaded' => 'function', 'mount' => 'function', 'mountAll' => 'function' }, api_shape)
+    assert_equal(
+      { 'ensureLoaded' => 'function', 'mount' => 'function', 'mountAll' => 'function', 'mountMode' => 'lazy' },
+      api_shape
+    )
   end
 
   test 'first-gesture trigger mounts pending widgets' do
@@ -64,5 +70,35 @@ class LazyMountTest < ApplicationSystemTestCase
     # A click anywhere on the page should fire the gesture trigger.
     find('#spacer').click
     wait_for_turnstile_inputs(1, message: 'after first-gesture click')
+  end
+
+  test 'focusing a field in the widget form mounts it before the user can submit' do
+    visit lazy_demo_url
+
+    assert_no_selector "div.cf-turnstile input[name='cf-turnstile-response']", visible: :all, wait: 1
+
+    # Focus programmatically rather than clicking: a click would also fire the
+    # first-gesture trigger, so the assertion below would pass even if the
+    # form-interaction trigger were broken. `focus()` fires focusin only.
+    execute_script("document.getElementById('lazy-demo-message').focus()")
+
+    wait_for_turnstile_inputs(1, message: 'after focusing a field in the same form')
+  end
+
+  test 'the placeholder reserves height before the widget mounts, then releases it' do
+    visit lazy_demo_url
+
+    # The server-rendered markup carries the height as a data attribute only;
+    # the helper writes it through the CSSOM, which CSP's style-src-attr does
+    # not govern, so no 'unsafe-inline' relaxation is needed.
+    assert_selector "div.cf-turnstile[data-reserve-height='65']", visible: :all
+    assert_selector "div.cf-turnstile[style*='min-height: 65px']", visible: :all
+
+    mount_turnstile_widgets!
+    wait_for_turnstile_inputs(1)
+
+    # Once the iframe supplies its own height the reservation is dropped, so a
+    # space-less widget can't leave a permanent gap behind.
+    assert_no_selector "div.cf-turnstile[style*='min-height']", visible: :all
   end
 end

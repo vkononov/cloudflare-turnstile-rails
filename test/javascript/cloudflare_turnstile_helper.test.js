@@ -82,7 +82,7 @@ function placeholder(attrs = {}) {
 function bootHelper(options = {}) {
   const {
     scriptUrl = DEFAULT_API_URL,
-    lazyMount = 'true', // string or null to omit the attribute entirely
+    mountMode = 'lazy', // 'lazy' | 'eager' | 'passive', or null to omit the attribute
     nonce = null,
     omitCurrentScript = false
   } = options;
@@ -96,7 +96,7 @@ function bootHelper(options = {}) {
     helperScriptTag = doc.createElement('script');
     helperScriptTag.id = 'cf-turnstile-helper-tag';
     if (scriptUrl !== null) helperScriptTag.setAttribute('data-script-url', scriptUrl);
-    if (lazyMount !== null) helperScriptTag.setAttribute('data-lazy-mount', lazyMount);
+    if (mountMode !== null) helperScriptTag.setAttribute('data-mount-mode', mountMode);
     if (nonce !== null) helperScriptTag.setAttribute('nonce', nonce);
     doc.head.appendChild(helperScriptTag);
     Object.defineProperty(doc, 'currentScript', {
@@ -107,6 +107,15 @@ function bootHelper(options = {}) {
 
   win.eval(HELPER_SRC);
   return helperScriptTag;
+}
+
+// Resolve api.js and run every callback the helper queued behind it.
+function resolveApiJs() {
+  const render = vi.fn();
+  win.turnstile = { render };
+  const apiScript = getInjectedApiScript();
+  if (apiScript) apiScript.onload();
+  return render;
 }
 
 function getInjectedApiScript() {
@@ -124,6 +133,14 @@ function fireGesture(type) {
 async function flushMicrotasks() {
   await Promise.resolve();
   await Promise.resolve();
+}
+
+// When window.turnstile already exists, ensureLoaded() defers the callback with
+// setTimeout(cb, 0) — a macrotask. Awaiting microtasks alone is not enough to
+// see the render happen, so tests that mount against an already-loaded api.js
+// must await this instead.
+function flushMacrotasks() {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 // ---------- tests ----------
@@ -559,34 +576,118 @@ describe('Turbo / Turbolinks hooks', () => {
   });
 });
 
-describe('eager mode (data-lazy-mount=false)', () => {
-  test('loads api.js immediately at boot', () => {
-    bootHelper({ lazyMount: 'false' });
+describe('eager mode (data-mount-mode=eager)', () => {
+  test('loads api.js immediately at boot, even with no placeholder on the page', () => {
+    bootHelper({ mountMode: 'eager' });
 
     const injected = getInjectedApiScript();
     expect(injected).toBeTruthy();
     expect(injected.src).toBe(DEFAULT_API_URL);
   });
 
+  test('renders every placeholder on the page', () => {
+    // The whole point of the mode: turning lazy mounting off must not mean
+    // "nobody renders anything". This is v1.x behaviour.
+    const a = placeholder();
+    const b = placeholder();
+    bootHelper({ mountMode: 'eager' });
+
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledWith(a);
+    expect(render).toHaveBeenCalledWith(b);
+    expect(a.dataset.turnstileRendered).toBe('true');
+    expect(b.dataset.turnstileRendered).toBe('true');
+  });
+
   test('does not register an IntersectionObserver', () => {
     placeholder();
-    bootHelper({ lazyMount: 'false' });
+    bootHelper({ mountMode: 'eager' });
 
     expect(ioInstances.length).toBe(0);
   });
 
-  test('does not register Turbo hooks (regression check)', () => {
-    bootHelper({ lazyMount: 'false' });
+  test('re-renders on Turbo navigation', async () => {
+    bootHelper({ mountMode: 'eager' });
+    const render = resolveApiJs();
 
-    const dispatchSpy = vi.spyOn(win.cfTurnstile, 'mountAll');
+    const el = placeholder();
     fireGesture('turbo:render');
-    fireGesture('turbo:frame-load');
-    fireGesture('turbolinks:load');
+    await flushMacrotasks();
 
-    expect(dispatchSpy).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledWith(el);
+  });
 
-    // turbo:before-stream-render must also be a no-op in eager mode —
-    // Cloudflare's api.js (or the consumer's manual render) is in charge.
+  test('renders placeholders delivered by a Turbo Stream', async () => {
+    bootHelper({ mountMode: 'eager' });
+    const render = resolveApiJs();
+
+    const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
+    let el;
+    ev.detail = { render: function() { el = placeholder(); } };
+    doc.dispatchEvent(ev);
+    ev.detail.render();
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledWith(el);
+  });
+
+  test('renders placeholders added to the DOM later', async () => {
+    bootHelper({ mountMode: 'eager' });
+    const render = resolveApiJs();
+
+    const el = placeholder();
+    await flushMicrotasks();
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledWith(el);
+  });
+
+  test('does not register the first-gesture trigger', () => {
+    placeholder({ 'data-turnstile-rendered': 'true' });
+    bootHelper({ mountMode: 'eager' });
+
+    const mountAllSpy = vi.spyOn(win.cfTurnstile, 'mountAll');
+    fireGesture('pointerdown');
+    fireGesture('keydown');
+
+    expect(mountAllSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('passive mode (data-mount-mode=passive)', () => {
+  test('loads api.js and renders nothing at all', async () => {
+    const el = placeholder();
+    bootHelper({ mountMode: 'passive' });
+
+    const injected = getInjectedApiScript();
+    expect(injected).toBeTruthy();
+
+    const render = resolveApiJs();
+    await flushMacrotasks();
+
+    expect(render).not.toHaveBeenCalled();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+  });
+
+  test('registers no observers, triggers or Turbo hooks', async () => {
+    placeholder();
+    bootHelper({ mountMode: 'passive' });
+    resolveApiJs();
+
+    expect(ioInstances.length).toBe(0);
+
+    // A DOM insertion, a gesture and a Turbo navigation must all be ignored:
+    // the host app owns rendering in this mode.
+    const el = placeholder();
+    fireGesture('pointerdown');
+    fireGesture('turbo:render');
+    await flushMicrotasks();
+    await flushMacrotasks();
+
+    expect(win.turnstile.render).not.toHaveBeenCalled();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+
     const ev = new win.Event('turbo:before-stream-render', { bubbles: true });
     ev.detail = { render: function() {} };
     const originalRender = ev.detail.render;
@@ -594,16 +695,29 @@ describe('eager mode (data-lazy-mount=false)', () => {
     expect(ev.detail.render).toBe(originalRender);
   });
 
-  test('does not register gesture listeners', () => {
-    bootHelper({ lazyMount: 'false' });
+  test('still exposes the public API so the host app can use it', () => {
+    bootHelper({ mountMode: 'passive' });
 
-    const beforeApi = getInjectedApiScript();
-    fireGesture('pointerdown');
-    fireGesture('keydown');
-    const afterApi = getInjectedApiScript();
-    // Same single api.js tag — no extra triggering happened.
-    expect(afterApi).toBe(beforeApi);
+    expect(typeof win.cfTurnstile.ensureLoaded).toBe('function');
+    expect(typeof win.cfTurnstile.mount).toBe('function');
+    expect(typeof win.cfTurnstile.mountAll).toBe('function');
+    expect(win.cfTurnstile.mountMode).toBe('passive');
   });
+});
+
+describe('mount mode attribute parsing', () => {
+  test.each([[null], ['bogus'], ['']])(
+    'falls back to lazy when data-mount-mode is %o',
+    (mode) => {
+      placeholder();
+      bootHelper({ mountMode: mode });
+
+      // Lazy is the only mode that observes instead of loading api.js at boot.
+      expect(win.cfTurnstile.mountMode).toBe('lazy');
+      expect(ioInstances.length).toBe(1);
+      expect(getInjectedApiScript()).toBeUndefined();
+    }
+  );
 });
 
 describe('gesture trigger', () => {
@@ -801,5 +915,286 @@ describe('mount() race protection and error handling', () => {
     );
     // Marker NOT set when render threw — a later mount can retry.
     expect(el.dataset.turnstileRendered).toBeUndefined();
+  });
+});
+
+describe('attribute-driven reveal (native <dialog> and friends)', () => {
+  // A closed <dialog> is hidden by the UA rule `dialog:not([open])
+  // { display: none }`, and showModal() reveals it by setting the `open`
+  // attribute — no style, class or hidden mutation to observe. This models
+  // that mechanism with a stylesheet rather than a real <dialog>, so the test
+  // doesn't depend on how completely JSDOM implements dialog.
+  function dialogWithWidget() {
+    const style = doc.createElement('style');
+    style.textContent = '.dialog:not([open]) { display: none; } .dialog[open] { display: block; }';
+    doc.head.appendChild(style);
+
+    const dialog = doc.createElement('div');
+    dialog.className = 'dialog';
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    dialog.appendChild(el);
+    doc.body.appendChild(dialog);
+
+    return { dialog, el };
+  }
+
+  test('the wrapper really is hidden before the open attribute is set', () => {
+    const { dialog, el } = dialogWithWidget();
+
+    // Guards the test itself: if JSDOM stopped applying the stylesheet, the
+    // assertions below would pass for the wrong reason.
+    expect(win.getComputedStyle(dialog).display).toBe('none');
+    expect(el).toBeTruthy();
+  });
+
+  test('setting the open attribute mounts the widget inside', async () => {
+    const { dialog, el } = dialogWithWidget();
+    bootHelper();
+
+    // The one-shot gesture trigger is consumed while the dialog is still
+    // closed, so there is no fallback path left to rescue this widget.
+    fireGesture('pointerdown');
+    expect(getInjectedApiScript()).toBeUndefined();
+
+    dialog.setAttribute('open', '');
+    await flushMicrotasks();
+
+    expect(getInjectedApiScript()).toBeTruthy();
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][0]).toBe(el);
+    expect(el.dataset.turnstileRendered).toBe('true');
+  });
+
+  test('a style-driven reveal still works (regression check)', async () => {
+    const modal = doc.createElement('div');
+    modal.style.display = 'none';
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    modal.appendChild(el);
+    doc.body.appendChild(modal);
+
+    bootHelper();
+    modal.style.display = 'block';
+    await flushMicrotasks();
+
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][0]).toBe(el);
+  });
+
+  test('a toggle event mounts a revealed widget (<details> and popovers)', async () => {
+    const style = doc.createElement('style');
+    style.textContent = '.panel { display: none; } .panel.shown { display: block; }';
+    doc.head.appendChild(style);
+
+    const panel = doc.createElement('div');
+    panel.className = 'panel';
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    panel.appendChild(el);
+    doc.body.appendChild(panel);
+
+    bootHelper();
+    expect(win.getComputedStyle(panel).display).toBe('none');
+
+    // Popovers reveal without mutating an observable attribute, so the toggle
+    // event is the only signal available. Dispatch it non-bubbling, exactly as
+    // the real event behaves, to prove the listener is capture-phase.
+    panel.className = 'panel shown';
+    panel.dispatchEvent(new win.Event('toggle', { bubbles: false }));
+
+    const render = resolveApiJs();
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][0]).toBe(el);
+  });
+
+  test('a reveal does not force-mount below-the-fold widgets that were never hidden', async () => {
+    const visible = placeholder();
+    const modal = doc.createElement('div');
+    modal.style.display = 'none';
+    const hidden = doc.createElement('div');
+    hidden.className = 'cf-turnstile';
+    modal.appendChild(hidden);
+    doc.body.appendChild(modal);
+
+    bootHelper();
+    modal.style.display = 'block';
+    await flushMicrotasks();
+
+    const render = resolveApiJs();
+
+    // Only the widget that was hidden at observe time gets mounted; the
+    // always-visible one stays with the IntersectionObserver.
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][0]).toBe(hidden);
+    expect(visible.dataset.turnstileRendered).toBeUndefined();
+  });
+});
+
+describe('form-interaction trigger', () => {
+  function formWithWidget() {
+    const form = doc.createElement('form');
+    const input = doc.createElement('input');
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    form.appendChild(input);
+    form.appendChild(el);
+    doc.body.appendChild(form);
+    return { form, input, el };
+  }
+
+  function fireOn(target, type) {
+    target.dispatchEvent(new win.Event(type, { bubbles: true }));
+  }
+
+  test.each([['focusin'], ['pointerover']])(
+    '%s inside a form mounts that form\'s widget before any submit happens',
+    (eventName) => {
+      const { input, el } = formWithWidget();
+      bootHelper();
+      expect(getInjectedApiScript()).toBeUndefined();
+
+      fireOn(input, eventName);
+
+      // api.js is already on its way well before the user reaches submit.
+      expect(getInjectedApiScript()).toBeTruthy();
+      const render = resolveApiJs();
+
+      expect(render).toHaveBeenCalledWith(el);
+      expect(el.dataset.turnstileRendered).toBe('true');
+    }
+  );
+
+  test('interacting with one form leaves another form\'s widget pending', () => {
+    const first = formWithWidget();
+    const second = formWithWidget();
+    bootHelper();
+
+    fireOn(first.input, 'focusin');
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledWith(first.el);
+    expect(second.el.dataset.turnstileRendered).toBeUndefined();
+  });
+
+  test('interaction outside any form mounts nothing', () => {
+    formWithWidget();
+    const loose = doc.createElement('div');
+    doc.body.appendChild(loose);
+    bootHelper();
+
+    fireOn(loose, 'pointerover');
+
+    expect(getInjectedApiScript()).toBeUndefined();
+  });
+
+  test('a form that arrives via Turbo is covered too', async () => {
+    bootHelper();
+    const { input, el } = formWithWidget();
+    await flushMicrotasks();
+
+    fireOn(input, 'focusin');
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledWith(el);
+  });
+
+  test('mounts a form widget even when the first-gesture trigger already fired', () => {
+    // The gesture trigger is one-shot; the form listeners are not, so a form
+    // shown after that first click is still covered.
+    fireGesture('pointerdown');
+    const { input, el } = formWithWidget();
+    bootHelper();
+    fireGesture('pointerdown');
+
+    fireOn(input, 'focusin');
+    const render = resolveApiJs();
+
+    expect(render).toHaveBeenCalledWith(el);
+  });
+});
+
+describe('space reservation (CLS)', () => {
+  test('applies data-reserve-height as an inline min-height at observe time', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('65px');
+  });
+
+  test('honours a compact widget\'s taller reservation', () => {
+    const el = placeholder({ 'data-reserve-height': '120' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('120px');
+  });
+
+  test('leaves elements without the attribute untouched', () => {
+    const el = placeholder();
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('');
+  });
+
+  test('releases the reservation once the widget has rendered', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+    expect(el.style.minHeight).toBe('65px');
+
+    ioInstances[0].trigger(el);
+    resolveApiJs();
+
+    // Cloudflare's iframe sizes the element from here on. Releasing the
+    // reservation also means an invisible sitekey that forgot to set
+    // config.reserve_space = false doesn't keep a permanent gap.
+    expect(el.dataset.turnstileRendered).toBe('true');
+    expect(el.style.minHeight).toBe('');
+  });
+
+  test('never overrides an author-supplied min-height', () => {
+    const el = placeholder({ 'data-reserve-height': '65', style: 'min-height: 300px' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('300px');
+
+    ioInstances[0].trigger(el);
+    resolveApiJs();
+
+    // Not ours to clear, either.
+    expect(el.style.minHeight).toBe('300px');
+  });
+
+  test('preserves other inline styles when releasing the reservation', () => {
+    const el = placeholder({ 'data-reserve-height': '65', style: 'width: 300px' });
+    bootHelper();
+    expect(el.style.minHeight).toBe('65px');
+
+    ioInstances[0].trigger(el);
+    resolveApiJs();
+
+    expect(el.style.minHeight).toBe('');
+    expect(el.style.width).toBe('300px');
+  });
+
+  test('reserves space for placeholders added after boot', async () => {
+    bootHelper();
+    const el = placeholder({ 'data-reserve-height': '65' });
+    await flushMicrotasks();
+
+    expect(el.style.minHeight).toBe('65px');
+  });
+
+  test('does not reserve in eager mode, where there is nothing to defer', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper({ mountMode: 'eager' });
+
+    expect(el.style.minHeight).toBe('');
   });
 });
