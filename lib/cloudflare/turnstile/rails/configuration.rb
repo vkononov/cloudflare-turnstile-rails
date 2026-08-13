@@ -3,7 +3,9 @@ module Cloudflare
     module Rails
       class Configuration
         attr_writer :script_url
-        attr_accessor :site_key, :secret_key, :onload, :auto_populate_response_in_test_env
+        # NOTE: :render is deliberately absent here — it has a custom writer
+        # (below) that records whether the host app set it explicitly.
+        attr_accessor :site_key, :secret_key, :onload, :default_data, :auto_populate_response_in_test_env
 
         def initialize
           @script_url = Cloudflare::SCRIPT_URL
@@ -14,6 +16,7 @@ module Cloudflare
           @onload = nil
           @lazy_mount = true
           @lazy_mount_explicitly_set = false
+          @default_data = {}
           @auto_populate_response_in_test_env = true
         end
 

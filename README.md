@@ -1,13 +1,15 @@
 # Cloudflare Turnstile Rails
 
-[![Gem Version](https://img.shields.io/gem/v/cloudflare-turnstile-rails.svg)](https://rubygems.org/gems/cloudflare-turnstile-rails)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Lint Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
-[![Test Status](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml/badge.svg)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
+[![Gem Version](https://img.shields.io/gem/v/cloudflare-turnstile-rails.svg?label=Gem&logo=rubygems&logoColor=white)](https://rubygems.org/gems/cloudflare-turnstile-rails)
+[![Ruby](https://img.shields.io/badge/Ruby-2.6%20to%204.0-CC342D?logo=ruby&logoColor=white)](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml)
+[![Rails](https://img.shields.io/badge/Rails-5.0%20to%208.1-D30001?logo=rubyonrails&logoColor=white)](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/Appraisals)
+[![Test Matrix](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/test.yml?branch=main&label=Test%20Matrix&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/test.yml)
+[![Lint](https://img.shields.io/github/actions/workflow/status/vkononov/cloudflare-turnstile-rails/lint.yml?branch=main&label=Lint&logo=github)](https://github.com/vkononov/cloudflare-turnstile-rails/actions/workflows/lint.yml)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Cloudflare Turnstile gem for Ruby on Rails with built-in Turbo and Turbolinks support and CSP compliance.
 
-Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
+Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rails/Ruby matrix tested daily in CI.
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/vkononov)
 
@@ -90,10 +92,35 @@ Supports `Rails >= 5.0` with `Ruby >= 2.6.0`.
    <%= cloudflare_turnstile_tag %>
    ```
 
-  That's it! Though it is recommended to match your `theme` and `language` to your app's design and locale:
+  That's it! By default the widget auto-detects the visitor's `theme` and `language`.
+
+* To match your app's design and locale, set defaults once in the initializer and they'll apply to every `cloudflare_turnstile_tag` automatically:
+
+  ```ruby
+  Cloudflare::Turnstile::Rails.configure do |config|
+    config.default_data = {
+      theme: 'light',
+      language: 'en'
+    }
+  end
+  ```
+
+  Values may also be a proc, evaluated at render time — useful for following the current locale:
+
+  ```ruby
+  config.default_data = { language: -> { I18n.locale } }
+  ```
+
+* You can still override any default (or add extra options) on an individual tag via the `data:` option. Per-tag values take precedence over the configured defaults:
 
    ```erb
-   <%= cloudflare_turnstile_tag data: { theme: 'light', language: 'en' } %>
+   <%= cloudflare_turnstile_tag data: { theme: 'dark' } %>
+   ```
+
+* To drop a configured default on a single tag (so its attribute isn't rendered at all), pass `nil` for that key:
+
+   ```erb
+   <%= cloudflare_turnstile_tag data: { theme: nil } %>
    ```
 
 * For all available **data-**\* options (e.g., `action`, `cdata`, `theme`, etc.), refer to the official Cloudflare client-side rendering docs:

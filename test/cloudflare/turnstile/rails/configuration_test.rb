@@ -53,6 +53,16 @@ module Cloudflare
           assert_equal Cloudflare::SCRIPT_URL, @config.script_url
         end
 
+        def test_default_data_defaults_to_empty_hash
+          assert_empty(@config.default_data)
+        end
+
+        def test_default_data_is_configurable
+          @config.default_data = { theme: 'dark' }
+
+          assert_equal({ theme: 'dark' }, @config.default_data)
+        end
+
         def test_auto_populate_response_in_test_env
           assert @config.auto_populate_response_in_test_env
 

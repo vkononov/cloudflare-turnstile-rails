@@ -35,14 +35,14 @@ Gem::Specification.new do |spec|
       #{spec.homepage}#upgrading-from-v1x-to-v20
   MESSAGE
 
-  # Specify which files should be added to the gem when it is released.
-  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-  gemspec = File.basename(__FILE__)
-  excluded_dev_files = %w[package.json package-lock.json eslint.config.js vitest.config.js].freeze
-  excluded_dev_prefixes = %w[bin/ test/ spec/ features/ templates/ .git .github appveyor Gemfile].freeze
+  # Ship only what the gem needs at runtime: the library code (including its
+  # generators, assets, and locales) plus the license and readme. Using an
+  # allowlist keeps tests, tooling, CI config, and the sample app template out
+  # of the package even as new development files are added over time.
+  root_files = %w[LICENSE.txt README.md]
   spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec) || f.start_with?(*excluded_dev_prefixes) || excluded_dev_files.include?(f)
+    ls.readlines("\x0", chomp: true).select do |f|
+      f.start_with?('lib/') || root_files.include?(f)
     end
   end
   spec.bindir = 'exe'

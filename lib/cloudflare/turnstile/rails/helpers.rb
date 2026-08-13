@@ -8,7 +8,7 @@ module Cloudflare
           config = Rails.configuration
           site_key ||= config.site_key
           html_options[:class] = Cloudflare::WIDGET_CLASS unless html_options.key?(:class)
-          html_options[:data] ||= {}
+          html_options[:data] = cloudflare_turnstile_default_data.merge(html_options[:data] || {})
           html_options[:data][:sitekey] ||= site_key
           reserve_turnstile_space(html_options, config)
 
@@ -33,6 +33,14 @@ module Cloudflare
         end
 
         private
+
+        # Resolves the configured default data attributes, evaluating any
+        # callable values (e.g. a proc bound to I18n.locale) at render time.
+        def cloudflare_turnstile_default_data
+          (Rails.configuration.default_data || {}).transform_values do |value|
+            value.respond_to?(:call) ? value.call : value
+          end
+        end
 
         # Reserves a placeholder height while the lazy-mounted widget is
         # waiting in the wings, so the page doesn't jump (CLS) when Cloudflare
