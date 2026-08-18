@@ -1186,6 +1186,45 @@ describe('space reservation (CLS)', () => {
     expect(el.style.minHeight).toBe('');
   });
 
+  test('releases a reservation carried over from a cached page snapshot', async () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('65px');
+
+    /*
+     * Turbo snapshots a page by cloning it, so attributes and inline styles
+     * survive the round trip but JavaScript properties on the node do not.
+     * Recording ownership of the reservation on the element itself is what
+     * keeps the two halves together across that boundary.
+     */
+    const restored = el.cloneNode(true);
+    el.parentNode.replaceChild(restored, el);
+    await flushMicrotasks();
+
+    expect(restored.style.minHeight).toBe('65px');
+
+    const render = resolveApiJs();
+    win.cfTurnstile.mount(restored);
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledWith(restored);
+    expect(restored.style.minHeight).toBe('');
+  });
+
+  test('leaves an author min-height alone even when it matches the reserved height', () => {
+    // Ownership is recorded, not inferred from the value, so a coincidental
+    // match is not mistaken for a reservation of ours to release.
+    const el = placeholder({ 'data-reserve-height': '65', style: 'min-height: 65px' });
+    bootHelper();
+
+    ioInstances[0].trigger(el);
+    resolveApiJs();
+
+    expect(el.dataset.turnstileRendered).toBe('true');
+    expect(el.style.minHeight).toBe('65px');
+  });
+
   test('never overrides an author-supplied min-height', () => {
     const el = placeholder({ 'data-reserve-height': '65', style: 'min-height: 300px' });
     bootHelper();
