@@ -175,6 +175,8 @@ describe('public API surface', () => {
     expect(reAddedEvents).not.toContain('turbo:frame-load');
     expect(reAddedEvents).not.toContain('turbolinks:load');
     expect(reAddedEvents).not.toContain('turbo:before-stream-render');
+    expect(reAddedEvents).not.toContain('turbo:before-cache');
+    expect(reAddedEvents).not.toContain('turbolinks:before-cache');
   });
 });
 
@@ -573,6 +575,173 @@ describe('Turbo / Turbolinks hooks', () => {
     doc.dispatchEvent(ev);
 
     expect(ev.detail.render).toBe('not a function');
+  });
+});
+
+describe('Turbo page cache (before-cache teardown)', () => {
+  // Stand in for what Cloudflare's api.js actually does to a container it
+  // renders: an iframe for the challenge, plus the hidden input carrying the
+  // token that the surrounding form submits.
+  function resolveWithWidget({ id = 'widget-1', remove = vi.fn() } = {}) {
+    const render = vi.fn((target) => {
+      target.insertAdjacentHTML(
+        'beforeend',
+        '<iframe src="about:blank"></iframe>' +
+          '<input type="hidden" name="cf-turnstile-response" value="tok-abc">'
+      );
+      return id;
+    });
+
+    win.turnstile = { render, remove };
+    const apiScript = getInjectedApiScript();
+    if (apiScript) apiScript.onload();
+    return { render, remove };
+  }
+
+  test('empties a mounted widget out of the page before the snapshot is taken', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+    ioInstances[0].trigger(el);
+    const { render } = resolveWithWidget();
+
+    // Identity rather than toHaveBeenCalledWith: deep-equalling an element
+    // that now contains an iframe sends vitest's comparator into the frame.
+    expect(render.mock.calls[0][0] === el).toBe(true);
+    expect(el.querySelector('iframe')).not.toBeNull();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
+
+    fireGesture('turbo:before-cache');
+
+    // The spent token is the dangerous half: it would be submitted verbatim
+    // by the restored page.
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
+    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+  });
+
+  test('a widget restored from a cached snapshot mounts again instead of staying spent', async () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+    ioInstances[0].trigger(el);
+    const { render } = resolveWithWidget();
+
+    expect(render).toHaveBeenCalledTimes(1);
+
+    // Turbo caches by cloning the DOM after firing the event...
+    fireGesture('turbo:before-cache');
+    const restored = el.cloneNode(true);
+
+    // ...and a back navigation puts the clone on the page, with no request to
+    // the server that could have handed us a fresh placeholder.
+    el.remove();
+    doc.body.appendChild(restored);
+    fireGesture('turbo:render');
+
+    // Compared as booleans on purpose: a failing DOM-node comparison makes
+    // vitest serialize the node, and serializing one that contains an iframe
+    // blows up with an unrelated TypeError that hides the real assertion.
+    expect(ioInstances[0].observed.indexOf(restored) !== -1).toBe(true);
+
+    ioInstances[0].trigger(restored);
+    await flushMacrotasks();
+
+    expect(render.mock.calls.length).toBe(2);
+    expect(render.mock.calls[1][0] === restored).toBe(true);
+    expect(restored.dataset.turnstileRendered).toBe('true');
+  });
+
+  test('dismisses the widget through turnstile.remove with the id render returned', () => {
+    const el = placeholder();
+    bootHelper();
+    ioInstances[0].trigger(el);
+    const { remove } = resolveWithWidget({ id: 'widget-42' });
+
+    fireGesture('turbo:before-cache');
+
+    expect(remove).toHaveBeenCalledWith('widget-42');
+  });
+
+  test('puts the space reservation back so the restored page does not jump', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('65px');
+
+    ioInstances[0].trigger(el);
+    resolveWithWidget();
+
+    expect(el.style.minHeight).toBe('');
+
+    fireGesture('turbo:before-cache');
+
+    expect(el.style.minHeight).toBe('65px');
+    expect(el.hasAttribute('data-turnstile-reserved')).toBe(true);
+  });
+
+  test('also resets a widget Cloudflare auto-rendered, which carries no marker', () => {
+    const el = placeholder();
+    bootHelper({ mountMode: 'eager' });
+
+    // render=auto: Cloudflare mounts the widget without going through mount(),
+    // so the only evidence is the iframe.
+    el.insertAdjacentHTML('beforeend', '<iframe src="about:blank"></iframe>');
+
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+
+    fireGesture('turbo:before-cache');
+
+    expect(el.querySelector('iframe')).toBeNull();
+  });
+
+  test('leaves a placeholder that never mounted exactly as it was', () => {
+    const el = placeholder({ 'data-reserve-height': '65' });
+    el.insertAdjacentHTML('beforeend', '<span class="spinner">Loading…</span>');
+    bootHelper();
+
+    fireGesture('turbo:before-cache');
+
+    // Consumer-supplied fallback content is not ours to throw away.
+    expect(el.querySelector('.spinner')).not.toBeNull();
+    expect(el.style.minHeight).toBe('65px');
+  });
+
+  test('turbolinks:before-cache gets the same treatment', () => {
+    const el = placeholder();
+    bootHelper();
+    ioInstances[0].trigger(el);
+    resolveWithWidget();
+
+    fireGesture('turbolinks:before-cache');
+
+    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+  });
+
+  test('a remove() that throws still leaves an empty placeholder behind', () => {
+    const el = placeholder();
+    bootHelper();
+    ioInstances[0].trigger(el);
+    resolveWithWidget({
+      remove: vi.fn(() => {
+        throw new Error('unknown widget id');
+      })
+    });
+
+    fireGesture('turbo:before-cache');
+
+    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.dataset.turnstileRendered).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
+  });
+
+  test('passive mode never tears down the host app\'s widgets', () => {
+    const el = placeholder();
+    bootHelper({ mountMode: 'passive' });
+    el.insertAdjacentHTML('beforeend', '<iframe src="about:blank"></iframe>');
+
+    fireGesture('turbo:before-cache');
+
+    expect(el.querySelector('iframe')).not.toBeNull();
   });
 });
 

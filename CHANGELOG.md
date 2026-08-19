@@ -79,6 +79,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   protected double-`mount`, IO-unavailable fallback, init-guard idempotency,
   eager mode wiring, and the gesture / Turbo / MutationObserver paths).
 
+### Fixed
+
+- **A page restored from the Turbo cache no longer shows a spent widget.**
+  Turbo snapshots a page by cloning its DOM and restores the clone on a
+  back/forward navigation without contacting the server, so a rendered
+  widget came back with its iframe and its hidden `cf-turnstile-response`
+  input intact — carrying a token that had already been used or had since
+  expired — while the iframe made every mount path treat the placeholder as
+  already handled. Submitting the form then failed verification with no
+  recovery short of a full reload. The gem now hooks
+  `turbo:before-cache` / `turbolinks:before-cache`, dismisses each widget via
+  `turnstile.remove()`, empties the placeholder, and re-applies the space
+  reservation, so the restored copy mounts again and gets a fresh token.
+  Widgets under `config.manual_render = true` are left alone — the host app
+  owns those. This bug predates the mount modes and affected v1.x as well.
+
 ### Changed
 
 - **`config.render` now defaults to `'explicit'`** so the gem can lazy-mount

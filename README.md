@@ -17,7 +17,7 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
 * **Lazy mounting (v2.0+)**: Cloudflare's `api.js` and the widget itself are deferred until the user scrolls to it, interacts with its form, opens the modal holding it, touches the page, or your code asks for them — no wasted bandwidth on widgets below the fold or in hidden modals. Opt out per app with `lazy_mount` or `manual_render`.
-* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:render`, `turbo:frame-load`, `turbo:before-stream-render`, and DOM mutations.
+* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:render`, `turbo:frame-load`, `turbo:before-stream-render`, and DOM mutations — and resets them on `turbo:before-cache` so a restored page never submits a stale token.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
 * **CSP nonce support**: Honours Rails' `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
@@ -360,6 +360,24 @@ The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompany
 ### Turbo & Turbo Streams Support
 
 All widgets will re‑initialize automatically on Turbo navigations (`turbo:render`) and on `<turbo-stream>` renders (`turbo:before-stream-render`) — no extra wiring needed.
+
+The gem also cleans up after itself on `turbo:before-cache` (and
+`turbolinks:before-cache`). Turbo caches a page by cloning its DOM and restores
+that clone on a back/forward navigation without asking the server for anything,
+so a rendered widget would come back complete with its iframe and, more to the
+point, the hidden input holding a token that has already been spent or has since
+expired — and the gem's own "already mounted" check would see the iframe and
+leave it alone. Submitting that form fails verification with no way out short of
+a reload. To avoid it, the gem dismisses each widget through
+`turnstile.remove()` and empties the placeholder just before the snapshot is
+taken, so the restored copy mounts again and gets a fresh token. Space
+reservations are re-applied at the same time, so the restored page doesn't jump
+either.
+
+Widgets you render yourself (`config.manual_render = true`) are left untouched:
+in that mode the gem doesn't own them, so tearing them down behind your back
+would be worse than the stale token. If you cache pages and render widgets
+yourself, add your own `turbo:before-cache` teardown.
 
 ### Turbolinks Support
 
