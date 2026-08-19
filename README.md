@@ -245,6 +245,12 @@ The gem will still inject `api.js` (honouring your CSP nonce) and still expose
 anything. This is the safe mode to pick if you were on v1.x with
 `config.render = 'explicit'` and your own render calls.
 
+Keep `config.render = 'explicit'` when you do this. If the `api.js` URL doesn't
+carry `render=explicit`, Cloudflare's auto-render observer mounts every widget
+the moment the script arrives and your own `render()` call then lands on an
+already-rendered element, failing with Turnstile error 300030. The gem warns on
+boot if it spots that pairing.
+
 #### Disabling lazy mounting
 
 If you want the gem to keep rendering widgets for you but do it immediately —
@@ -526,14 +532,23 @@ Your upgrade path depends on whether you rendered widgets yourself in v1.x:
 
 #### Boot-time warnings
 
-The gem emits a `Rails.logger.warn` on boot when `config.lazy_mount` is on but
-the `api.js` URL it is about to load does not carry `render=explicit` — either
-because `config.render = 'auto'`, or because a custom `config.script_url`
-omits the parameter. Cloudflare's auto-render observer would mount every widget
-as soon as the script arrives, leaving the lazy triggers nothing to defer, so
-the gem falls back to `eager` mode. Fix it by restoring `render=explicit`, or
-silence it with `config.lazy_mount = false` (or `config.manual_render = true`
-if you render widgets yourself).
+Both of the gem's boot-time warnings come from the same root cause: the `api.js`
+URL it is about to load does not carry `render=explicit`, so Cloudflare's
+auto-render observer will mount every widget as soon as the script arrives. That
+happens either because `config.render = 'auto'`, or because a custom
+`config.script_url` omits the parameter. Which warning you get depends on who
+else was going to render:
+
+| Warning | When | What the gem does |
+| ------- | ---- | ----------------- |
+| Lazy mounting has nothing left to defer | `config.lazy_mount = true` | Falls back to `eager` mode, so widgets still work |
+| Your `render()` call will fail with error 300030 | `config.manual_render = true` | Nothing it can do — the gem isn't the one rendering |
+
+The first is a degradation; the second is a genuine breakage, because two
+parties are rendering the same element. Fix either by restoring
+`render=explicit`. Failing that, silence the first with
+`config.lazy_mount = false`; the second has no safe workaround other than
+letting the gem render for you.
 
 #### Edge case: mixing eager and lazy widgets on the same page
 

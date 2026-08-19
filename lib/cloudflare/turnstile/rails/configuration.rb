@@ -77,6 +77,19 @@ module Cloudflare
           lazy_mount && !manual_render && !explicit_render?
         end
 
+        # The mirror image of #lazy_mount_misconfigured?: the host app has taken
+        # over rendering, but the api.js URL doesn't ask Cloudflare to stand
+        # down. Cloudflare's auto-render observer will mount every widget the
+        # moment api.js arrives, and the app's own turnstile.render() call then
+        # lands on an already-rendered element — Turnstile error 300030.
+        #
+        # Unlike the lazy case there is no safe fallback to take: the gem isn't
+        # the one rendering, so it can't defer, skip, or undo anything. All it
+        # can do is say so.
+        def manual_render_misconfigured?
+          manual_render && !explicit_render?
+        end
+
         # Whether to reserve vertical space for a widget, to absorb the layout
         # shift when Cloudflare swaps the iframe in.
         #

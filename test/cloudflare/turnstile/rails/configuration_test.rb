@@ -188,6 +188,35 @@ module Cloudflare
                            'manual_render opts out of mounting entirely, so lazy_mount is moot'
         end
 
+        def test_manual_render_misconfigured_when_render_is_auto
+          @config.manual_render = true
+          @config.render = 'auto'
+
+          assert_predicate @config, :manual_render_misconfigured?,
+                           'Cloudflare auto-renders and so does the app, which is error 300030'
+        end
+
+        def test_manual_render_misconfigured_for_a_custom_url_without_explicit
+          @config.manual_render = true
+          @config.script_url = 'https://example.com/custom-api.js'
+
+          assert_predicate @config, :manual_render_misconfigured?
+        end
+
+        def test_manual_render_not_misconfigured_when_explicit
+          @config.manual_render = true
+
+          refute_predicate @config, :manual_render_misconfigured?,
+                           'render=explicit leaves the app as the only party rendering, which is the point'
+        end
+
+        def test_manual_render_not_misconfigured_when_the_gem_still_renders
+          @config.render = 'auto'
+
+          refute_predicate @config, :manual_render_misconfigured?,
+                           'without manual_render nobody is competing with the auto-render observer'
+        end
+
         def test_reserve_space_only_applies_in_lazy_mode
           assert_predicate @config, :reserve_space?
 

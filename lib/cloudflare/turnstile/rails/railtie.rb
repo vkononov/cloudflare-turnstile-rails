@@ -32,7 +32,10 @@ module Cloudflare
         def self.emit_upgrade_warnings
           # Use ::Cloudflare to avoid colliding with the nested constants module
           # at Cloudflare::Turnstile::Rails::Cloudflare.
-          warn_lazy_mount_misconfiguration(::Cloudflare::Turnstile::Rails.configuration)
+          config = ::Cloudflare::Turnstile::Rails.configuration
+
+          warn_lazy_mount_misconfiguration(config)
+          warn_manual_render_misconfiguration(config)
         end
 
         def self.warn_lazy_mount_misconfiguration(config)
@@ -46,6 +49,20 @@ module Cloudflare
             'to eager mounting. Either drop the override so render=explicit is applied ' \
             '(recommended), add render=explicit to your config.script_url, or set ' \
             "config.lazy_mount = false to silence this notice. See: #{UPGRADE_GUIDE_URL}"
+          )
+        end
+
+        def self.warn_manual_render_misconfiguration(config)
+          return unless config.manual_render_misconfigured?
+
+          ::Rails.logger&.warn(
+            '[cloudflare-turnstile-rails] config.manual_render = true means your app calls ' \
+            "turnstile.render() itself, but #{config.script_url} does not carry " \
+            "render=explicit. Cloudflare's auto-render observer will mount every widget as " \
+            'soon as api.js arrives, and your own render() call will then fail with error ' \
+            '300030 (widget already rendered). Either drop the override so render=explicit is ' \
+            'applied (recommended), add render=explicit to your config.script_url, or stop ' \
+            "calling turnstile.render() yourself. See: #{UPGRADE_GUIDE_URL}"
           )
         end
       end

@@ -56,11 +56,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   verifies the widget doesn't render before the modal opens, that an
   unrelated gesture (click outside / keypress) doesn't force-render it,
   and that `cfTurnstile.mountAll()` still does.
-- **Boot-time warning** when `config.lazy_mount` is on but the resolved
-  `api.js` URL doesn't carry `render=explicit` — whether because
-  `config.render = 'auto'` or because a custom `config.script_url` omits
-  the parameter. The gem names the offending URL and falls back to eager
-  mounting.
+- **Boot-time warnings** when the resolved `api.js` URL doesn't carry
+  `render=explicit` — whether because `config.render = 'auto'` or because a
+  custom `config.script_url` omits the parameter. Both name the offending
+  URL:
+  - with `config.lazy_mount` on, the lazy triggers have nothing left to
+    defer, so the gem says so and falls back to eager mounting.
+  - with `config.manual_render` on, Cloudflare's auto-render observer and
+    the host app's own `turnstile.render()` call compete for the same
+    element, which surfaces as Turnstile error 300030. The gem isn't the
+    one rendering, so it has no fallback to take and only reports it.
 - **`post_install_message`** in the gemspec to surface upgrade notes.
 - New system test (`lazy_mount_test.rb`) and `mount_turnstile_widgets!`
   helper covering the new behaviour end-to-end.

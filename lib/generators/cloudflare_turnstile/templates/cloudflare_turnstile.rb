@@ -50,7 +50,8 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # `turnstile.render(...)` yourself. This takes precedence over `lazy_mount`.
   #
   # This is the setting to use if you were on v1.x with `config.render = 'explicit'` and your own
-  # render calls.
+  # render calls. Keep `render` set to 'explicit': otherwise Cloudflare auto-renders every widget
+  # and your own render() call fails with error 300030 (the gem warns on boot if it sees this).
   # config.manual_render = false
 
   # Optional: Reserve vertical space for the widget to prevent Cumulative Layout Shift.
