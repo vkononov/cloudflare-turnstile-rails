@@ -33,10 +33,18 @@ module Cloudflare
           end
         end
 
+        # Stands in for ActionDispatch::Flash::FlashHash, where `now` writes to
+        # the same request but is never carried over to the next one.
+        class FakeFlash < Hash
+          def now
+            @now ||= {}
+          end
+        end
+
         def setup
           @model = DummyModel.new
           @params = {}
-          @flash = {}
+          @flash = FakeFlash.new
           singleton_class.define_method(:params) { @params }
           singleton_class.define_method(:flash) { @flash }
         end
@@ -167,7 +175,17 @@ module Cloudflare
           Verification.stub(:verify, fake) do
             valid_turnstile?
 
-            assert_equal ErrorMessage.default, @flash[:alert]
+            assert_equal ErrorMessage.default, @flash.now[:alert]
+          end
+        end
+
+        def test_valid_turnstile_does_not_carry_the_alert_into_the_next_request
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?
+
+            assert_empty @flash
           end
         end
 
@@ -178,6 +196,7 @@ module Cloudflare
             valid_turnstile?(model: @model)
 
             assert_empty @flash
+            assert_empty @flash.now
             assert_equal [[:base, ErrorMessage.default]], @model.errors.added
           end
         end
@@ -189,6 +208,7 @@ module Cloudflare
             valid_turnstile?
 
             assert_empty @flash
+            assert_empty @flash.now
           end
         end
 
@@ -199,6 +219,7 @@ module Cloudflare
             verify_turnstile
 
             assert_empty @flash
+            assert_empty @flash.now
           end
         end
       end

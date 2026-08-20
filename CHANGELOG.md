@@ -101,6 +101,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   safely without racing Cloudflare's own auto-render observer. v1.x users
   who never touched `config.render` get the new behaviour transparently;
   see the v1.x → v2.0 upgrade guide in the README for details.
+- **The automatic failure message is now `flash.now[:alert]`.** When no model
+  is passed and verification fails, `valid_turnstile?` used to set a flash that
+  also survived into the following request, so a re-rendered form showed the
+  message twice: once on the render and again on the next page the visitor
+  landed on. Apps that redirect after a failed check now need to set
+  `flash[:alert]` themselves.
 - The internal "rendered" marker on placeholder elements moved from
   `data-cf-rendered` (which looked like a Cloudflare-owned attribute) to
   `data-turnstile-rendered`.
@@ -111,6 +117,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Most apps need no changes — the lazy mode is on by default and works out
   of the box.
+- If you redirect after a failed `valid_turnstile?` check with no model, set
+  `flash[:alert]` yourself. The gem's automatic message is scoped to the
+  current render now, so it no longer survives a redirect.
 - If you were on v1.x with `config.render = 'explicit'` and called
   `turnstile.render(...)` from your own JavaScript, set
   `config.manual_render = true`. The gem loads `api.js` for you and renders

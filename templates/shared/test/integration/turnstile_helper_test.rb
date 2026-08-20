@@ -118,7 +118,7 @@ class TurnstileHelperTest < ActionDispatch::IntegrationTest
 
     post contact_url
 
-    assert_redirected_to new_contact_url
-    assert_equal Cloudflare::Turnstile::Rails::ErrorMessage.default, flash[:alert]
+    assert_response :unprocessable_entity
+    assert_select 'p#alert', text: Cloudflare::Turnstile::Rails::ErrorMessage.default
   end
 end

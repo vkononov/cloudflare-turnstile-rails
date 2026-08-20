@@ -279,7 +279,7 @@ renders, and DOM mutations exactly as it does in lazy mode.
   end
   ```
 
-* When **no model is provided** and verification fails, `valid_turnstile?` automatically sets `flash[:alert]` with the error message. This is useful for redirect-based flows:
+* When **no model is provided** and verification fails, `valid_turnstile?` automatically sets `flash.now[:alert]` with the error message, so the failure is reported on the view you render next:
 
   ```ruby
   def create
@@ -287,10 +287,17 @@ renders, and DOM mutations exactly as it does in lazy mode.
       # Passed: no model needed
       redirect_to dashboard_path, notice: 'Success!'
     else
-      # Failed: flash[:alert] is automatically set
-      redirect_to contact_path
+      # Failed: flash.now[:alert] is automatically set
+      render :new, status: :unprocessable_entity
     end
   end
+  ```
+
+  Re-rendering is usually the better response, since a redirect discards whatever the visitor typed. If you do redirect after a failed check, set the message yourself, because `flash.now` does not survive a redirect:
+
+  ```ruby
+  flash[:alert] = Cloudflare::Turnstile::Rails::ErrorMessage.default
+  redirect_to contact_path
   ```
 
 * You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare's API:
@@ -537,6 +544,9 @@ v2.0 introduces lazy mounting and changes a handful of defaults. Here's what to 
 | New JS API | – | `window.cfTurnstile.{ensureLoaded, mount, mountAll, mountMode}` |
 | Placeholder `min-height` | None | Size-aware (`65px` / `120px`) reserved in lazy mode to prevent CLS |
 | New config | – | `lazy_mount`, `manual_render`, `reserve_space` |
+| Automatic failure message (no model) | `flash[:alert]`, also shown on the next request | `flash.now[:alert]`, shown on the current render only |
+
+If you redirect after a failed `valid_turnstile?` check with no model, set `flash[:alert]` yourself. Re-rendering the form needs no change.
 
 #### Decision matrix
 

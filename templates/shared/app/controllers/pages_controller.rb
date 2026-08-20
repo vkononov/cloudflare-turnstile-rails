@@ -14,8 +14,9 @@ class PagesController < ApplicationController
     if valid_turnstile?
       redirect_to lazy_demo_path, notice: 'Lazy demo verified.'
     else
-      # `valid_turnstile?` already populated flash[:alert] with the
-      # gem's default error message on failure; just redirect.
+      # The gem's automatic message is scoped to the current render, so a
+      # redirect has to carry its own.
+      flash[:alert] = Cloudflare::Turnstile::Rails::ErrorMessage.default
       redirect_to lazy_demo_path
     end
   end
@@ -29,6 +30,7 @@ class PagesController < ApplicationController
     if valid_turnstile?
       redirect_to modal_demo_path, notice: 'Modal demo verified.'
     else
+      flash[:alert] = Cloudflare::Turnstile::Rails::ErrorMessage.default
       redirect_to modal_demo_path
     end
   end

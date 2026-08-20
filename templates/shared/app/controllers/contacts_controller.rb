@@ -5,7 +5,7 @@ class ContactsController < ApplicationController
     if valid_turnstile?
       redirect_to root_url, notice: 'Message sent successfully.'
     else
-      redirect_to new_contact_url
+      render :new, status: :unprocessable_entity
     end
   end
 end

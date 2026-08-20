@@ -26,11 +26,23 @@ class ContactsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 'Message sent successfully.', flash[:notice]
   end
 
-  test 'POST /contact with failing Turnstile → redirect with flash alert' do
+  test 'POST /contact with failing Turnstile → re-renders the form with the alert' do
     Cloudflare::Turnstile::Rails.configuration.secret_key = '2x0000000000000000000000000000000AA'
     post contact_url
 
-    assert_redirected_to new_contact_url
-    assert_equal Cloudflare::Turnstile::Rails::ErrorMessage.default, flash[:alert]
+    assert_response :unprocessable_entity
+    assert_select 'p#alert', text: Cloudflare::Turnstile::Rails::ErrorMessage.default
+  end
+
+  test 'a failed Turnstile alert is not repeated on the next page' do
+    Cloudflare::Turnstile::Rails.configuration.secret_key = '2x0000000000000000000000000000000AA'
+    post contact_url
+
+    assert_select 'p#alert', count: 1
+
+    get new_contact_url
+
+    assert_response :success
+    assert_select 'p#alert', count: 0
   end
 end

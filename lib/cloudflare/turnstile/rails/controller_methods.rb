@@ -20,7 +20,7 @@ module Cloudflare
         def valid_turnstile?(model: nil, **opts)
           response = verify_turnstile(model: model, **opts)
           success = response.is_a?(VerificationResponse) && response.success?
-          flash[:alert] = ErrorMessage.default if !success && model.nil?
+          flash.now[:alert] = ErrorMessage.default if !success && model.nil?
           success
         end
 
