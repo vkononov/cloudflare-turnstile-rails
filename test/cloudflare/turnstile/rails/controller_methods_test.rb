@@ -33,10 +33,16 @@ module Cloudflare
           end
         end
 
+        class FakeFlash < Hash
+          def now
+            @now ||= {}
+          end
+        end
+
         def setup
           @model = DummyModel.new
           @params = {}
-          @flash = {}
+          @flash = FakeFlash.new
           singleton_class.define_method(:params) { @params }
           singleton_class.define_method(:flash) { @flash }
         end
@@ -171,14 +177,64 @@ module Cloudflare
           end
         end
 
+        def test_valid_turnstile_flash_now_keeps_the_alert_out_of_the_next_request
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(flash: :now)
+
+            assert_equal ErrorMessage.default, @flash.now[:alert]
+            assert_empty @flash
+          end
+        end
+
+        def test_valid_turnstile_flash_now_sets_nothing_on_success
+          fake = VerificationResponse.new({ 'success' => true })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(flash: :now)
+
+            assert_empty @flash.now
+            assert_empty @flash
+          end
+        end
+
+        def test_valid_turnstile_flash_false_leaves_the_flash_alone
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            refute valid_turnstile?(flash: false)
+
+            assert_empty @flash
+            assert_empty @flash.now
+          end
+        end
+
+        def test_valid_turnstile_flash_option_is_not_sent_to_cloudflare
+          captured = {}
+          fake = VerificationResponse.new({ 'success' => true })
+
+          Verification.stub(:verify, lambda { |**opts|
+            captured.merge!(opts)
+            fake
+          }) do
+            valid_turnstile?(flash: :now, remoteip: '1.2.3.4')
+
+            assert_equal '1.2.3.4', captured[:remoteip]
+            refute_includes captured.keys, :flash
+          end
+        end
+
         def test_valid_turnstile_does_not_set_flash_when_model_provided
           fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
 
           Verification.stub(:verify, fake) do
             valid_turnstile?(model: @model)
+            valid_turnstile?(model: @model, flash: :now)
 
             assert_empty @flash
-            assert_equal [[:base, ErrorMessage.default]], @model.errors.added
+            assert_empty @flash.now
+            assert_equal [[:base, ErrorMessage.default]] * 2, @model.errors.added
           end
         end
 

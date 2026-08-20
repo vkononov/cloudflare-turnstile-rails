@@ -154,6 +154,18 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
   end
   ```
 
+* Pass `flash: :now` when the failure re-renders the form instead of redirecting. The message is then shown on that render only, rather than also appearing on the next request. Pass `flash: false` to set no message at all:
+
+  ```ruby
+  def create
+    if valid_turnstile?(flash: :now)
+      redirect_to dashboard_path, notice: 'Success!'
+    else
+      render :new, status: :unprocessable_entity
+    end
+  end
+  ```
+
 * You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare's API:
   [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#required-parameters)
 
