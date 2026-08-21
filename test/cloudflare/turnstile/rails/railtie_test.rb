@@ -5,6 +5,8 @@ require 'cloudflare/turnstile/rails/railtie'
 module Cloudflare
   module Turnstile
     module Rails
+      # Covers the railtie's wiring only. The boot-time warnings it schedules
+      # live in UpgradeWarningsTest.
       class RailtieTest < ActiveSupport::TestCase
         setup do
           # Manually run all of our Railtie's initializers so that
@@ -23,6 +25,12 @@ module Cloudflare
           names = Railtie.initializers.map(&:name)
 
           assert_includes names, 'cloudflare.turnstile.rails.helpers'
+        end
+
+        test 'defines upgrade_warning initializer' do
+          names = Railtie.initializers.map(&:name)
+
+          assert_includes names, 'cloudflare.turnstile.rails.upgrade_warning'
         end
 
         test 'ControllerMethods get mixed into ActionController::Base' do

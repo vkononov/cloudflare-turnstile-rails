@@ -16,7 +16,8 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 ## Features
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
-* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:render` and `turbo:before-stream-render`.
+* **Lazy mounting (v2.0+)**: Cloudflare's `api.js` and the widget itself are deferred until the user scrolls to it, interacts with its form, opens the modal holding it, touches the page, or your code asks for them — no wasted bandwidth on widgets below the fold or in hidden modals. Opt out per app with `lazy_mount` or `manual_render`.
+* **Turbo & Turbo Streams aware**: Automatically re‑initializes widgets on `turbo:render`, `turbo:frame-load`, `turbo:before-stream-render`, and DOM mutations — and resets them on `turbo:before-cache` so a restored page never submits a stale token.
 * **Legacy Turbolinks support**: Includes a helper for Turbolinks to handle remote form submissions with validation errors.
 * **CSP nonce support**: Honours Rails' `content_security_policy_nonce` for secure inline scripts.
 * **Rails Engine & Asset pipeline**: Ships a precompiled JS helper via Railtie — no manual asset setup.
@@ -28,6 +29,7 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 - [Getting Started](#getting-started)
   - [Installation](#installation)
   - [Frontend Integration](#frontend-integration)
+  - [Lazy Mounting](#lazy-mounting)
   - [Backend Validation](#backend-validation)
   - [CSP Nonce Support](#csp-nonce-support)
   - [Turbo & Turbo Streams Support](#turbo--turbo-streams-support)
@@ -39,6 +41,7 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
   - [Available Translation Keys](#available-translation-keys)
 - [Automated Testing of Your Integration](#automated-testing-of-your-integration)
 - [Upgrade Guide](#upgrade-guide)
+  - [Upgrading from v1.x to v2.0](#upgrading-from-v1x-to-v20)
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
 - [Contributing](#contributing)
@@ -124,6 +127,142 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
   [https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configuration-options](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/#configuration-options)
 * **Supported locales** for the widget UI can be found here:
   [https://developers.cloudflare.com/turnstile/reference/supported-languages/](https://developers.cloudflare.com/turnstile/reference/supported-languages/)
+
+### Lazy Mounting
+
+Starting in **v2.0**, the gem defers loading Cloudflare's `api.js` and rendering the widget until one of the following happens:
+
+* the widget scrolls into (or near) the viewport (`IntersectionObserver`),
+* the user focuses or hovers any field in the same `<form>` as the widget,
+* the widget is revealed — a `<dialog>` is opened, a `<details>` expanded, a popover shown, or a `display: none` ancestor made visible,
+* the user touches, clicks, or types anywhere on the page (first-gesture trigger), or
+* your own JavaScript calls `cfTurnstile.mount(el)` / `cfTurnstile.mountAll()`.
+
+This means widgets in modals, accordions, or below the fold no longer trigger a network round-trip on every page load.
+
+#### Mounting modes
+
+Two options decide which of the gem's three mounting modes you get:
+
+| Mode | Configuration | Behaviour |
+|---|---|---|
+| `lazy` (default) | `lazy_mount = true` | The gem renders widgets, deferring each one until it is actually needed (the triggers above). |
+| `eager` | `lazy_mount = false` | The gem renders every widget as soon as `api.js` is ready, and keeps doing so across Turbo navigations and DOM changes. This is the v1.x behaviour. |
+| `passive` | `manual_render = true` | The gem loads `api.js` and renders nothing at all — your JavaScript calls `turnstile.render(...)` itself. |
+
+```ruby
+Cloudflare::Turnstile::Rails.configure do |config|
+  config.lazy_mount = true # default — defer rendering until needed
+  config.manual_render = false # default — let the gem render widgets
+  config.render = 'explicit' # default — required for lazy mounting to take effect
+end
+```
+
+`manual_render` wins over `lazy_mount`: if you render widgets yourself, there is nothing for the gem to defer. The resolved mode is emitted on the helper `<script>` tag as `data-mount-mode`, so you can confirm it straight from the page source.
+
+`config.render` defaults to `'explicit'` so that Cloudflare's auto-render observer doesn't race the gem's lazy triggers. Lazy mounting only works if the `api.js` URL actually carries `render=explicit` — without it, Cloudflare mounts every widget the moment the script arrives and there is nothing left to defer. If you set `config.render = 'auto'`, or set a custom `config.script_url` that omits the parameter, the gem logs a warning on boot and falls back to `eager` mode.
+
+#### Public JavaScript API
+
+The helper exposes a small API on `window.cfTurnstile`:
+
+| Method                       | Description                                                                                                                                                |
+|------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `cfTurnstile.ensureLoaded(cb)` | Loads `api.js` if it isn't already loaded, then invokes `cb()`. Use this if you want to call `turnstile.render(...)` yourself but still benefit from lazy loading. |
+| `cfTurnstile.mount(el)`      | Renders a single placeholder `<div class="cf-turnstile">` element. Idempotent — already-rendered widgets are skipped.                                       |
+| `cfTurnstile.mountAll()`     | Renders every pending placeholder on the page. Useful when you reveal a hidden modal or want to force-render in tests.                                      |
+| `cfTurnstile.mountMode`      | The resolved mounting mode as a string — `'lazy'`, `'eager'`, or `'passive'`. Handy for asserting the configuration from a system test.                     |
+
+```javascript
+// Programmatically reveal a modal containing a Turnstile widget. You don't
+// usually need to call mountAll() yourself — the IntersectionObserver picks
+// up newly-visible widgets automatically — but mountAll() is the explicit
+// escape hatch when you want to pre-warm a widget right before it appears.
+modalEl.classList.add('open');
+window.cfTurnstile.mountAll();
+```
+
+#### Hidden modals & dialogs
+
+The first-gesture trigger (`pointerdown` / `keydown`) deliberately **skips
+widgets that are inside a `display: none` ancestor** — closed modals,
+hidden tabs, collapsed accordions, etc. Those widgets stay pending until
+the container becomes visible, at which point the IntersectionObserver
+mounts them. This means a random click anywhere on the page won't pre-warm
+a widget the user can't see (which would defeat the purpose of lazy
+mounting it).
+
+If you need to override that — e.g. you're about to programmatically open
+a modal and want the widget pre-rendered — call `cfTurnstile.mountAll()`
+explicitly. It bypasses the visibility filter on purpose.
+
+`visibility: hidden` and `opacity: 0` widgets are *not* treated as hidden;
+the IntersectionObserver fires for both, so the helper does too.
+
+#### Cumulative Layout Shift (CLS)
+
+In `lazy` mode the widget's box doesn't exist until it mounts, so the page
+would jump when the iframe swaps in. To prevent that, the helper reserves a
+`min-height` on the placeholder that matches what Cloudflare's iframe will
+actually render at:
+
+| `data-size` | Reserved `min-height` |
+|---|---|
+| `normal` (default) / `flexible` | `65px` |
+| `compact` | `120px` |
+
+The server-rendered markup carries the height as a `data-reserve-height`
+attribute only. The helper applies it as a `min-height` through the CSSOM when
+the widget starts being observed, and releases it once the widget mounts.
+Because CSP's `style-src-attr` governs `style` attributes parsed from HTML and
+not CSSOM writes, this works under a strict policy with no
+`'unsafe-inline'` relaxation. An author-supplied `min-height` is never
+overridden.
+
+The reservation is skipped when:
+
+* the widget doesn't carry the `cf-turnstile` class — either `class: nil` or a custom class, both of which keep the helper from mounting it, so there'd be nothing to apply or release the reservation,
+* the resolved mode isn't `lazy` (in `eager` and `passive` mode the iframe is on its way before the first paint), or
+* you turn it off — globally with `config.reserve_space = false`, or per tag with `cloudflare_turnstile_tag reserve_space: false`.
+
+The escape hatch is what you want for an **invisible** or **managed** sitekey
+that resolves without any UI: it occupies no space, so there is none to
+reserve. Note that invisible mode is a property of the sitekey configured in
+the Cloudflare dashboard, not a `data-size` value — the only valid sizes are
+`normal`, `flexible`, and `compact`.
+
+#### Rendering widgets yourself
+
+If you already call `turnstile.render(...)` from your own JavaScript, tell the
+gem to stay out of the way:
+
+```ruby
+config.manual_render = true
+```
+
+The gem will still inject `api.js` (honouring your CSP nonce) and still expose
+`cfTurnstile.ensureLoaded(cb)`, but it will not render, observe, or re-render
+anything. This is the safe mode to pick if you were on v1.x with
+`config.render = 'explicit'` and your own render calls.
+
+Keep `config.render = 'explicit'` when you do this. If the `api.js` URL doesn't
+carry `render=explicit`, Cloudflare's auto-render observer mounts every widget
+the moment the script arrives and your own `render()` call then lands on an
+already-rendered element, failing with Turnstile error 300030. The gem warns on
+boot if it spots that pairing.
+
+#### Disabling lazy mounting
+
+If you want the gem to keep rendering widgets for you but do it immediately —
+the v1.x behaviour — set:
+
+```ruby
+config.lazy_mount = false
+```
+
+`api.js` is then fetched at boot, every placeholder is rendered as soon as it
+is ready, and the gem keeps following Turbo navigations, Turbo Stream
+renders, and DOM mutations exactly as it does in lazy mode.
 
 ### Backend Validation
 
@@ -221,6 +360,24 @@ The `cloudflare_turnstile_tag` helper injects the Turnstile widget and accompany
 ### Turbo & Turbo Streams Support
 
 All widgets will re‑initialize automatically on Turbo navigations (`turbo:render`) and on `<turbo-stream>` renders (`turbo:before-stream-render`) — no extra wiring needed.
+
+The gem also cleans up after itself on `turbo:before-cache` (and
+`turbolinks:before-cache`). Turbo caches a page by cloning its DOM and restores
+that clone on a back/forward navigation without asking the server for anything,
+so a rendered widget would come back complete with its iframe and, more to the
+point, the hidden input holding a token that has already been spent or has since
+expired — and the gem's own "already mounted" check would see the iframe and
+leave it alone. Submitting that form fails verification with no way out short of
+a reload. To avoid it, the gem dismisses each widget through
+`turnstile.remove()` and empties the placeholder just before the snapshot is
+taken, so the restored copy mounts again and gets a fresh token. Space
+reservations are re-applied at the same time, so the restored page doesn't jump
+either.
+
+Widgets you render yourself (`config.manual_render = true`) are left untouched:
+in that mode the gem doesn't own them, so tearing them down behind your back
+would be worse than the stale token. If you cache pages and render widgets
+yourself, add your own `turbo:before-cache` teardown.
 
 ### Turbolinks Support
 
@@ -364,7 +521,75 @@ This gem is fully compatible with Rails **5.0 and above**, and no special upgrad
 
 If you run into any issues after upgrading Rails, please [open an issue](https://github.com/vkononov/cloudflare-turnstile-rails/issues) so we can address it promptly.
 
+### Upgrading from v1.x to v2.0
+
+v2.0 introduces lazy mounting and changes a handful of defaults. Here's what to expect.
+
+**TL;DR — most apps need zero changes.** The widget will start rendering on first user interaction (or scroll-into-view) instead of on `DOMContentLoaded`, and that's it.
+
+#### What changed
+
+| | v1.x | v2.0 |
+|---|---|---|
+| Default `config.render` | `nil` (Cloudflare auto-renders) | `'explicit'` (gem drives rendering) |
+| `api.js` load timing | On every page load | When the widget is needed |
+| Widget render timing | Immediately after `api.js` loads | When the widget is needed — viewport, form interaction, reveal, first gesture, or `cfTurnstile.mountAll()` |
+| New JS API | – | `window.cfTurnstile.{ensureLoaded, mount, mountAll, mountMode}` |
+| Placeholder `min-height` | None | Size-aware (`65px` / `120px`) reserved in lazy mode to prevent CLS |
+| New config | – | `lazy_mount`, `manual_render`, `reserve_space` |
+
+#### Decision matrix
+
+Your upgrade path depends on whether you rendered widgets yourself in v1.x:
+
+* **You never set `config.render` in v1.x** (the most common case): no action required. Lazy mounting is on by default and works out of the box.
+* **You set `config.render = 'explicit'` in v1.x and called `turnstile.render(...)` yourself from JavaScript**: set `config.manual_render = true`. The gem loads `api.js` for you and renders nothing, so your existing code keeps working exactly as before.
+  * If you'd rather hand rendering over to the gem, delete your manual `turnstile.render(...)` calls instead and leave the defaults alone.
+  * `config.lazy_mount = false` is *not* the right setting here: it makes the gem render widgets eagerly, which would collide with your own `render()` calls (Turnstile error 300030).
+* **You set `config.render = 'auto'` in v1.x** (rare; `'auto'` is also Cloudflare's default): set `config.lazy_mount = false` to silence the boot-time warning, or switch to `config.render = 'explicit'` to opt into lazy mounting.
+
+#### Boot-time warnings
+
+Both of the gem's boot-time warnings come from the same root cause: the `api.js`
+URL it is about to load does not carry `render=explicit`, so Cloudflare's
+auto-render observer will mount every widget as soon as the script arrives. That
+happens either because `config.render = 'auto'`, or because a custom
+`config.script_url` omits the parameter. Which warning you get depends on who
+else was going to render:
+
+| Warning | When | What the gem does |
+| ------- | ---- | ----------------- |
+| Lazy mounting has nothing left to defer | `config.lazy_mount = true` | Falls back to `eager` mode, so widgets still work |
+| Your `render()` call will fail with error 300030 | `config.manual_render = true` | Nothing it can do — the gem isn't the one rendering |
+
+The first is a degradation; the second is a genuine breakage, because two
+parties are rendering the same element. Fix either by restoring
+`render=explicit`. Failing that, silence the first with
+`config.lazy_mount = false`; the second has no safe workaround other than
+letting the gem render for you.
+
+#### Edge case: mixing eager and lazy widgets on the same page
+
+If you have an unusual setup where some widgets need to render eagerly and others lazily, choose **lazy mode** globally and use a custom CSS class for the eager widgets so the gem's auto-mounting machinery skips them:
+
+```erb
+<%= cloudflare_turnstile_tag class: 'cf-turnstile-eager' %>
+```
+
+Then call `turnstile.render` yourself for those, e.g. inside `cfTurnstile.ensureLoaded(...)`.
+
 ## Troubleshooting
+
+**Lazy mounting in tests**
+- Capybara's `visit` doesn't fire a pointer event, so the first-gesture trigger doesn't kick in until your test actually clicks something. If you want a system test to render a widget immediately, either click somewhere first or call the gem's helper:
+
+  ```ruby
+  visit new_book_url
+  mount_turnstile_widgets! # calls window.cfTurnstile.mountAll() under the hood
+  wait_for_turnstile_inputs(1)
+  ```
+
+  In your own apps, use `page.execute_script('window.cfTurnstile.mountAll()')`.
 
 **Explicit Rendering**
 - If you've configured explicit mode (`config.render = 'explicit'`) but widgets still auto-render, override the default container class:
@@ -412,6 +637,19 @@ bundle exec appraisal rake test
 ```
 
 > **CI Note:** The GitHub Action [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml) runs this command on each Ruby/Rails combo and captures screenshots from system specs.
+
+### JavaScript Unit Tests
+
+The asset-pipeline helper script (`cloudflare_turnstile_helper.js`) has its own [vitest](https://vitest.dev) suite that runs in a fresh JSDOM per test, with no dependency on Ruby/Rails or a real browser. It covers the lazy-mount state machine, the public `cfTurnstile` API, the `IntersectionObserver` / `MutationObserver` / Turbo / gesture trigger paths, and every failure mode (`api.js` `onerror`, missing `data-script-url`, `turnstile.render` throwing, callback isolation, race-protected double-`mount`, etc.).
+
+```bash
+npm test          # one-shot run
+npm run test:watch # watch mode
+```
+
+The full `rake` default also runs the JS suite alongside Minitest and RuboCop.
+
+> **CI Note:** Runs as the `JavaScript unit tests` job in [.github/workflows/test.yml](https://github.com/vkononov/cloudflare-turnstile-rails/blob/main/.github/workflows/test.yml), independent of the Ruby/browser matrix.
 
 ### Code Linting
 

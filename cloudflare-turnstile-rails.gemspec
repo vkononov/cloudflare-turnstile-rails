@@ -16,6 +16,25 @@ Gem::Specification.new do |spec|
   spec.metadata['source_code_uri'] = spec.homepage
   spec.metadata['changelog_uri'] = "#{spec.homepage}/releases"
 
+  spec.post_install_message = <<~MESSAGE
+    Thanks for installing cloudflare-turnstile-rails #{Cloudflare::Turnstile::Rails::VERSION}!
+
+    v2.0 introduced lazy mounting for the Turnstile widget. The widget no
+    longer renders until it is needed (scrolled near, its form touched, or
+    revealed from a modal), and api.js is no longer fetched on every page
+    load. config.render now defaults to 'explicit' to make this safe.
+
+    Most apps need no changes. If you call turnstile.render() from your
+    own JavaScript, set config.manual_render = true: the gem will load
+    api.js for you and render nothing, so your existing code keeps
+    working. To get the v1.x eager rendering from the gem itself instead,
+    set config.lazy_mount = false.
+
+    Full upgrade guide:
+
+      #{spec.homepage}#upgrading-from-v1x-to-v20
+  MESSAGE
+
   # Ship only what the gem needs at runtime: the library code (including its
   # generators, assets, and locales) plus the license and readme. Using an
   # allowlist keeps tests, tooling, CI config, and the sample app template out
