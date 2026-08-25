@@ -33,17 +33,19 @@ module Cloudflare
           end
         end
 
+        FakeRequest = Struct.new(:flash)
+
         def setup
           @model = DummyModel.new
           @params = {}
-          @flash = {}
+          @flash = ActionDispatch::Flash::FlashHash.new
           singleton_class.define_method(:params) { @params }
-          singleton_class.define_method(:flash) { @flash }
+          singleton_class.define_method(:request) { FakeRequest.new(@flash) }
         end
 
         def teardown
           singleton_class.send(:remove_method, :params)
-          singleton_class.send(:remove_method, :flash)
+          singleton_class.send(:remove_method, :request)
         end
 
         def test_missing_response_adds_default_error
@@ -171,11 +173,68 @@ module Cloudflare
           end
         end
 
+        def test_valid_turnstile_alert_survives_into_the_next_request_by_default
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?
+            @flash.sweep
+
+            assert_equal ErrorMessage.default, @flash[:alert]
+          end
+        end
+
+        def test_valid_turnstile_with_flash_now_still_shows_the_alert_on_this_request
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(flash: :now)
+
+            assert_equal ErrorMessage.default, @flash[:alert]
+          end
+        end
+
+        def test_valid_turnstile_with_flash_now_drops_the_alert_before_the_next_request
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(flash: :now)
+            @flash.sweep
+
+            assert_nil @flash[:alert]
+          end
+        end
+
+        def test_valid_turnstile_flash_option_is_not_sent_to_cloudflare
+          captured = {}
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, lambda { |**opts|
+            captured.merge!(opts)
+            fake
+          }) do
+            valid_turnstile?(flash: :now)
+
+            refute_includes captured.keys, :flash
+          end
+        end
+
         def test_valid_turnstile_does_not_set_flash_when_model_provided
           fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
 
           Verification.stub(:verify, fake) do
             valid_turnstile?(model: @model)
+
+            assert_empty @flash
+            assert_equal [[:base, ErrorMessage.default]], @model.errors.added
+          end
+        end
+
+        def test_valid_turnstile_with_flash_now_and_a_model_still_reports_on_the_model_only
+          fake = VerificationResponse.new({ 'success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE] })
+
+          Verification.stub(:verify, fake) do
+            valid_turnstile?(model: @model, flash: :now)
 
             assert_empty @flash
             assert_equal [[:base, ErrorMessage.default]], @model.errors.added
