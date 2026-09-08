@@ -1,6 +1,5 @@
 appraise 'rails-5.0' do
   gem 'rails', '~> 5.0.0'
-  gem 'json', '< 3'
   if RUBY_VERSION >= '3.4.0'
     gem 'base64'
     gem 'mutex_m'
@@ -9,7 +8,6 @@ end
 
 appraise 'rails-5.1' do
   gem 'rails', '~> 5.1.0'
-  gem 'json', '< 3'
   if RUBY_VERSION >= '3.4.0'
     gem 'base64'
     gem 'mutex_m'
@@ -18,7 +16,6 @@ end
 
 appraise 'rails-5.2' do
   gem 'rails', '~> 5.2.0'
-  gem 'json', '< 3'
   if RUBY_VERSION >= '3.4.0'
     gem 'base64'
     gem 'mutex_m'
