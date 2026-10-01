@@ -6,8 +6,9 @@ Gem::Specification.new do |spec|
   spec.authors = ['Vadim Kononov']
   spec.email = ['vadim@konoson.com']
 
-  spec.summary = 'Cloudflare Turnstile gem for Rails with built-in Turbo and Turbolinks support and CSP compliance'
-  spec.description = 'Integrates Cloudflare Turnstile into Ruby on Rails applications, transparently reloads on Turbo and Turbolinks events, and embeds CSP-nonce-compliant scripts.'
+  spec.summary = 'Cloudflare Turnstile CAPTCHA for Rails with Turbo, Turbolinks and CSP support'
+  spec.description = 'Cloudflare Turnstile CAPTCHA, a reCAPTCHA alternative, for Ruby on Rails. View and controller ' \
+                     'helpers with Turbo, Turbo Streams, Turbolinks, CSP nonce and i18n support.'
   spec.homepage = 'https://github.com/vkononov/cloudflare-turnstile-rails'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 2.6.0'
