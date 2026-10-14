@@ -67,6 +67,19 @@ module Cloudflare
           assert_equal({ theme: 'dark' }, @config.default_data)
         end
 
+        def test_timeouts_default_to_five_seconds
+          assert_equal 5, @config.open_timeout
+          assert_equal 5, @config.read_timeout
+        end
+
+        def test_timeouts_are_configurable
+          @config.open_timeout = 1
+          @config.read_timeout = 2
+
+          assert_equal 1, @config.open_timeout
+          assert_equal 2, @config.read_timeout
+        end
+
         def test_auto_populate_response_in_test_env
           # Test that the auto_populate_response_in_test_env is set to true by default
           assert @config.auto_populate_response_in_test_env

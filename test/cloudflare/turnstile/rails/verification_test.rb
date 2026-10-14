@@ -88,18 +88,25 @@ module Cloudflare
         ensure
           ::Rails.env = original
         end
+
+        def assert_rejected_without_calling_cloudflare(response,
+                                                       error: ErrorCode::INVALID_INPUT_RESPONSE,
+                                                       env: 'production')
+          with_rails_env(env) do
+            resp = Verification.verify(response: response)
+
+            refute_predicate resp, :success?
+            assert_equal [error], resp.errors
+            assert_not_requested :post, @url
+          end
+        end
       end
 
       class VerificationTest < Minitest::Test
         include VerificationTestHelpers
 
-        def test_missing_response_proceeds_and_returns_verification_response
-          stub_verify('success' => true, 'error-codes' => [])
-          resp = Verification.verify(response: '')
-
-          assert_kind_of VerificationResponse, resp
-          assert_predicate resp, :success?
-          assert_empty resp.errors
+        def test_missing_response_fails_without_calling_cloudflare
+          assert_rejected_without_calling_cloudflare('', error: ErrorCode::MISSING_INPUT_RESPONSE)
         end
 
         def test_missing_secret_raises
@@ -183,27 +190,44 @@ module Cloudflare
         end
       end
 
+      # Tokens Cloudflare would reject are failed locally, without a request.
+      class VerificationMalformedInputTest < Minitest::Test
+        include VerificationTestHelpers
+
+        def test_array_token_is_rejected
+          assert_rejected_without_calling_cloudflare(['tok'])
+        end
+
+        def test_hash_token_is_rejected
+          assert_rejected_without_calling_cloudflare(ActionController::Parameters.new('a' => 'tok'))
+        end
+
+        def test_overlong_token_is_rejected
+          assert_rejected_without_calling_cloudflare('a' * (Cloudflare::MAX_RESPONSE_LENGTH + 1))
+        end
+
+        def test_token_at_the_length_limit_is_sent
+          token = 'a' * Cloudflare::MAX_RESPONSE_LENGTH
+          stub_verify_with_body({ 'response' => token }, { 'success' => true })
+
+          assert_predicate Verification.verify(response: token), :success?
+        end
+      end
+
       # Inputs that are blank or only whitespace: tokens, secrets, and the
       # test-environment token substitution.
       class VerificationBlankInputTest < Minitest::Test
         include VerificationTestHelpers
 
-        MISSING_RESPONSE = { 'success' => false, 'error-codes' => ['missing-input-response'] }.freeze
-
         def teardown
+          super
           Rails.configuration.auto_populate_response_in_test_env = true
         end
 
-        def test_whitespace_token_is_sent_as_is_when_auto_populate_is_off
-          with_rails_env('test') do
-            Rails.configuration.auto_populate_response_in_test_env = false
-            stub_verify_with_body({ 'response' => '  ' }, MISSING_RESPONSE)
+        def test_whitespace_token_fails_locally_when_auto_populate_is_off
+          Rails.configuration.auto_populate_response_in_test_env = false
 
-            resp = Verification.verify(response: '  ')
-
-            refute_predicate resp, :success?
-            assert_equal ['missing-input-response'], resp.errors
-          end
+          assert_rejected_without_calling_cloudflare('  ', error: ErrorCode::MISSING_INPUT_RESPONSE, env: 'test')
         end
 
         def test_blank_token_is_replaced_in_the_test_environment
@@ -223,11 +247,7 @@ module Cloudflare
         end
 
         def test_blank_token_is_not_replaced_outside_the_test_environment
-          with_rails_env('production') do
-            stub_verify_with_body({ 'response' => '' }, MISSING_RESPONSE)
-
-            refute_predicate Verification.verify(response: nil), :success?
-          end
+          assert_rejected_without_calling_cloudflare(nil, error: ErrorCode::MISSING_INPUT_RESPONSE)
         end
 
         def test_whitespace_only_secret_raises

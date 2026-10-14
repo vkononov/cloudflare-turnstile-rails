@@ -1,7 +1,9 @@
 require 'net/http'
 require 'openssl'
+require 'active_support/core_ext/object/blank'
 
 require_relative 'constants/cloudflare'
+require_relative 'constants/error_code'
 
 module Cloudflare
   module Turnstile
@@ -55,6 +57,14 @@ module Cloudflare
             raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET)
           end
 
+          local_error = if response.blank?
+                          ErrorCode::MISSING_INPUT_RESPONSE
+                        elsif !response.is_a?(String) || response.length > Cloudflare::MAX_RESPONSE_LENGTH
+                          ErrorCode::INVALID_INPUT_RESPONSE
+                        end
+
+          return VerificationResponse.new('success' => false, 'error-codes' => [local_error]) if local_error
+
           body = { 'secret' => secret, 'response' => response }
           body['remoteip'] = remoteip if remoteip
           body['idempotency_key'] = idempotency_key if idempotency_key
@@ -65,17 +75,19 @@ module Cloudflare
 
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
+          http.open_timeout = Rails.configuration.open_timeout
+          http.read_timeout = Rails.configuration.read_timeout
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           http.cert_store = OpenSSL::X509::Store.new
           http.cert_store.set_default_paths
 
           begin
             res = http.request(request)
-          rescue Net::OpenTimeout, Net::ReadTimeout => e
+          rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Errno::ETIMEDOUT => e
             raise ConfigurationError, "Turnstile verification timed out: #{e.message}"
           rescue OpenSSL::SSL::SSLError => e
             raise ConfigurationError, "SSL verification failed: #{e.message}"
-          rescue SocketError, Errno::ECONNREFUSED => e
+          rescue SocketError, EOFError, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH => e
             raise ConfigurationError, "Network error during Turnstile verification: #{e.message}"
           end
 
@@ -89,7 +101,7 @@ module Cloudflare
         end
 
         def self.auto_populate_test_response?(response)
-          (response.nil? || response.strip.empty?) &&
+          response.blank? &&
             ::Rails.env.test? &&
             Rails.configuration.auto_populate_response_in_test_env
         end
