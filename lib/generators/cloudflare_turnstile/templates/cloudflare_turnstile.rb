@@ -25,6 +25,12 @@ Cloudflare::Turnstile::Rails.configure do |config|
   #   language: -> { I18n.locale }
   # }
 
+  # Optional: Seconds to wait when connecting to, and reading from, Cloudflare's siteverify endpoint.
+  # Keep these short so a slow Cloudflare can't hold your app's request threads for long.
+  # config.open_timeout = 5
+  # config.read_timeout = 5
+  # config.write_timeout = 5
+
   # In the Rails Test environment, automatically fill in a dummy response if none was provided.
   # This lets you keep existing controller tests without having to add
   # params["cf-turnstile-response"] manually in every test.

@@ -65,17 +65,20 @@ module Cloudflare
 
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
+          http.open_timeout = Rails.configuration.open_timeout
+          http.read_timeout = Rails.configuration.read_timeout
+          http.write_timeout = Rails.configuration.write_timeout
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           http.cert_store = OpenSSL::X509::Store.new
           http.cert_store.set_default_paths
 
           begin
             res = http.request(request)
-          rescue Net::OpenTimeout, Net::ReadTimeout => e
+          rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Errno::ETIMEDOUT => e
             raise ConfigurationError, "Turnstile verification timed out: #{e.message}"
           rescue OpenSSL::SSL::SSLError => e
             raise ConfigurationError, "SSL verification failed: #{e.message}"
-          rescue SocketError, Errno::ECONNREFUSED => e
+          rescue SocketError, EOFError, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH => e
             raise ConfigurationError, "Network error during Turnstile verification: #{e.message}"
           end
 

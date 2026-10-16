@@ -187,6 +187,16 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
   end
   ```
 
+* Requests to Cloudflare time out after 5 seconds to connect, read, or write, so a slow Cloudflare can't tie up your app's request threads for long. A timeout raises `Cloudflare::Turnstile::Rails::ConfigurationError`. To change the limits:
+
+  ```ruby
+  Cloudflare::Turnstile::Rails.configure do |config|
+    config.open_timeout = 3
+    config.read_timeout = 3
+    config.write_timeout = 3
+  end
+  ```
+
 #### Advanced Validation
 
 * To inspect the entire verification payload, use `verify_turnstile`. It returns a `VerificationResponse` object with detailed information:
