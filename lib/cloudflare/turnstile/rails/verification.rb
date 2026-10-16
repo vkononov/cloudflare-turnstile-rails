@@ -1,7 +1,9 @@
 require 'net/http'
 require 'openssl'
+require 'active_support/core_ext/object/blank'
 
 require_relative 'constants/cloudflare'
+require_relative 'constants/error_code'
 
 module Cloudflare
   module Turnstile
@@ -55,6 +57,14 @@ module Cloudflare
             raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET)
           end
 
+          local_error = if response.blank?
+                          ErrorCode::MISSING_INPUT_RESPONSE
+                        elsif !response.is_a?(String) || response.length > Cloudflare::MAX_RESPONSE_LENGTH
+                          ErrorCode::INVALID_INPUT_RESPONSE
+                        end
+
+          return VerificationResponse.new('success' => false, 'error-codes' => [local_error]) if local_error
+
           body = { 'secret' => secret, 'response' => response }
           body['remoteip'] = remoteip if remoteip
           body['idempotency_key'] = idempotency_key if idempotency_key
@@ -89,7 +99,7 @@ module Cloudflare
         end
 
         def self.auto_populate_test_response?(response)
-          (response.nil? || response.strip.empty?) &&
+          response.blank? &&
             ::Rails.env.test? &&
             Rails.configuration.auto_populate_response_in_test_env
         end
