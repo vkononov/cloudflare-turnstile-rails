@@ -93,6 +93,28 @@ module Cloudflare
       class VerificationTest < Minitest::Test
         include VerificationTestHelpers
 
+        def test_invalid_encoding_token_fails_without_calling_cloudflare
+          token = (+"\xFF").force_encoding('UTF-8')
+
+          resp = Verification.verify(response: token)
+
+          refute_predicate resp, :success?
+          assert_equal [ErrorCode::INVALID_INPUT_RESPONSE], resp.errors
+          assert_not_requested :post, @url
+        end
+
+        def test_invalid_encoding_token_is_not_replaced_in_the_test_environment
+          token = (+"\xFF").force_encoding('UTF-8')
+
+          with_rails_env('test') do
+            resp = Verification.verify(response: token)
+
+            refute_predicate resp, :success?
+            assert_equal [ErrorCode::INVALID_INPUT_RESPONSE], resp.errors
+            assert_not_requested :post, @url
+          end
+        end
+
         def test_missing_response_proceeds_and_returns_verification_response
           stub_verify('success' => true, 'error-codes' => [])
           resp = Verification.verify(response: '')
@@ -265,6 +287,7 @@ module Cloudflare
         MISSING_RESPONSE = { 'success' => false, 'error-codes' => ['missing-input-response'] }.freeze
 
         def teardown
+          super
           Rails.configuration.auto_populate_response_in_test_env = true
         end
 
