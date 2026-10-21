@@ -191,9 +191,9 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 
   ```ruby
   Cloudflare::Turnstile::Rails.configure do |config|
-    config.open_timeout = 3
-    config.read_timeout = 3
-    config.write_timeout = 3
+    config.open_timeout = 5  # connecting to siteverify
+    config.read_timeout = 5  # reading the response
+    config.write_timeout = 5 # sending the verification POST
   end
   ```
 
