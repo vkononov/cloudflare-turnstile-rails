@@ -89,9 +89,11 @@ module Cloudflare
           ::Rails.env = original
         end
 
-        def assert_rejected_without_calling_cloudflare(response,
-                                                       error: ErrorCode::INVALID_INPUT_RESPONSE,
-                                                       env: 'production')
+        def assert_rejected_without_calling_cloudflare(
+          response,
+          error: ErrorCode::INVALID_INPUT_RESPONSE,
+          env: 'production'
+        )
           with_rails_env(env) do
             resp = Verification.verify(response: response)
 
@@ -208,14 +210,6 @@ module Cloudflare
       class VerificationMalformedInputTest < Minitest::Test
         include VerificationTestHelpers
 
-        def test_array_token_is_rejected
-          assert_rejected_without_calling_cloudflare(['tok'])
-        end
-
-        def test_hash_token_is_rejected
-          assert_rejected_without_calling_cloudflare(ActionController::Parameters.new('a' => 'tok'))
-        end
-
         def test_overlong_token_is_rejected
           assert_rejected_without_calling_cloudflare('a' * (Cloudflare::MAX_RESPONSE_LENGTH + 1))
         end
@@ -225,6 +219,23 @@ module Cloudflare
           stub_verify_with_body({ 'response' => token }, { 'success' => true })
 
           assert_predicate Verification.verify(response: token), :success?
+        end
+
+        NON_STRING_BLANK_VALUES = {
+          'false' => false,
+          'empty_array' => [],
+          'empty_hash' => {},
+          'empty_parameters' => ActionController::Parameters.new
+        }.freeze
+
+        NON_STRING_BLANK_VALUES.each do |name, value|
+          define_method("test_#{name}_token_is_rejected") do
+            assert_rejected_without_calling_cloudflare(value)
+          end
+
+          define_method("test_#{name}_token_is_rejected_in_test_env_with_auto_populate_on") do
+            assert_rejected_without_calling_cloudflare(value, env: 'test')
+          end
         end
       end
 
@@ -298,10 +309,14 @@ module Cloudflare
           Rails.configuration.auto_populate_response_in_test_env = true
         end
 
+        def test_whitespace_token_fails_without_calling_cloudflare
+          assert_rejected_without_calling_cloudflare('   ')
+        end
+
         def test_whitespace_token_fails_locally_when_auto_populate_is_off
           Rails.configuration.auto_populate_response_in_test_env = false
 
-          assert_rejected_without_calling_cloudflare('  ', error: ErrorCode::MISSING_INPUT_RESPONSE, env: 'test')
+          assert_rejected_without_calling_cloudflare('  ', error: ErrorCode::INVALID_INPUT_RESPONSE, env: 'test')
         end
 
         def test_blank_token_is_replaced_in_the_test_environment

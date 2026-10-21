@@ -216,6 +216,8 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
   end
   ```
 
+* A missing, malformed, or oversized token fails immediately with `missing-input-response` or `invalid-input-response`, without a request to Cloudflare. The `VerificationResponse` for these failures only has `success` and `error-codes`; it doesn't carry `hostname`, `challenge_ts`, or the other fields a real siteverify call returns.
+
 * The `VerificationResponse` object contains the raw response from Cloudflare:
 
   ```ruby

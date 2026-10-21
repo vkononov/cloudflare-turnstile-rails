@@ -1,6 +1,5 @@
 require 'net/http'
 require 'openssl'
-require 'active_support/core_ext/object/blank'
 
 require_relative 'constants/cloudflare'
 require_relative 'constants/error_code'
@@ -57,9 +56,10 @@ module Cloudflare
             raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET)
           end
 
-          local_error = if response.blank?
+          local_error = if missing_response?(response)
                           ErrorCode::MISSING_INPUT_RESPONSE
-                        elsif !response.is_a?(String) || response.length > Cloudflare::MAX_RESPONSE_LENGTH
+                        elsif !response.is_a?(String) || response.strip.empty? ||
+                              response.length > Cloudflare::MAX_RESPONSE_LENGTH
                           ErrorCode::INVALID_INPUT_RESPONSE
                         end
 
@@ -102,11 +102,16 @@ module Cloudflare
         end
 
         def self.auto_populate_test_response?(response)
-          response.blank? &&
+          (response.nil? || (response.is_a?(String) && response.strip.empty?)) &&
             ::Rails.env.test? &&
             Rails.configuration.auto_populate_response_in_test_env
         end
         private_class_method :auto_populate_test_response?
+
+        def self.missing_response?(response)
+          response.nil? || response == ''
+        end
+        private_class_method :missing_response?
       end
     end
   end
