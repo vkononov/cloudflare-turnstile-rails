@@ -49,6 +49,10 @@ module Cloudflare
 
       module Verification
         def self.verify(response: nil, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+          if response.is_a?(String) && !response.valid_encoding?
+            return VerificationResponse.new('success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE])
+          end
+
           response = 'dummy-response' if auto_populate_test_response?(response)
 
           secret ||= Rails.configuration.secret_key

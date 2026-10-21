@@ -107,6 +107,14 @@ module Cloudflare
       class VerificationTest < Minitest::Test
         include VerificationTestHelpers
 
+        def test_invalid_encoding_token_fails_without_calling_cloudflare
+          assert_rejected_without_calling_cloudflare((+"\xFF").force_encoding('UTF-8'))
+        end
+
+        def test_invalid_encoding_token_is_not_replaced_in_the_test_environment
+          assert_rejected_without_calling_cloudflare((+"\xFF").force_encoding('UTF-8'), env: 'test')
+        end
+
         def test_missing_response_fails_without_calling_cloudflare
           assert_rejected_without_calling_cloudflare('', error: ErrorCode::MISSING_INPUT_RESPONSE)
         end
