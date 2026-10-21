@@ -49,7 +49,6 @@ module Cloudflare
 
       module Verification
         def self.verify(response: nil, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
-          # Checked before anything calls String#strip, which raises on bytes that are not valid text.
           if response.is_a?(String) && !response.valid_encoding?
             return VerificationResponse.new('success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE])
           end
