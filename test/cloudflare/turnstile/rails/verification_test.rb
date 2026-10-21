@@ -153,13 +153,6 @@ module Cloudflare
           assert_equal expected, err.message
         end
 
-        def test_timeout_raises_configuration_error
-          stub_request(:post, @url).to_timeout
-
-          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
-          assert_match(/timed out/, err.message)
-        end
-
         def test_ssl_error_raises_configuration_error
           stub_request(:post, @url).to_raise(OpenSSL::SSL::SSLError.new('certificate verify failed'))
 
@@ -167,18 +160,39 @@ module Cloudflare
           assert_match(/SSL verification failed/, err.message)
         end
 
-        def test_socket_error_raises_configuration_error
-          stub_request(:post, @url).to_raise(SocketError.new('getaddrinfo: Name or service not known'))
+        # Each exception below is one Verification rescues and reports as a timeout.
+        TIMEOUT_ERRORS = {
+          'timeout' => Net::OpenTimeout.new('execution expired'),
+          'read_timeout' => Net::ReadTimeout.new('read timeout'),
+          'write_timeout' => Net::WriteTimeout.new('write timeout'),
+          'connection_timed_out' => Errno::ETIMEDOUT.new('Connection timed out')
+        }.freeze
 
-          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
-          assert_match(/Network error/, err.message)
+        # Each exception below is one Verification rescues and reports as a network error.
+        NETWORK_ERRORS = {
+          'socket_error' => SocketError.new('getaddrinfo: Name or service not known'),
+          'eof_error' => EOFError.new('end of file reached'),
+          'connection_refused' => Errno::ECONNREFUSED.new('Connection refused'),
+          'connection_reset' => Errno::ECONNRESET.new('Connection reset by peer'),
+          'host_unreachable' => Errno::EHOSTUNREACH.new('No route to host')
+        }.freeze
+
+        TIMEOUT_ERRORS.each do |name, exception|
+          define_method("test_#{name}_raises_configuration_error") do
+            stub_request(:post, @url).to_raise(exception)
+
+            err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+            assert_match(/timed out/, err.message)
+          end
         end
 
-        def test_connection_refused_raises_configuration_error
-          stub_request(:post, @url).to_raise(Errno::ECONNREFUSED.new('Connection refused'))
+        NETWORK_ERRORS.each do |name, exception|
+          define_method("test_#{name}_raises_configuration_error") do
+            stub_request(:post, @url).to_raise(exception)
 
-          err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
-          assert_match(/Network error/, err.message)
+            err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+            assert_match(/Network error/, err.message)
+          end
         end
 
         def test_non_success_http_status_with_json_body_is_returned
@@ -211,6 +225,66 @@ module Cloudflare
           stub_verify_with_body({ 'response' => token }, { 'success' => true })
 
           assert_predicate Verification.verify(response: token), :success?
+        end
+      end
+
+      # Proves that a Rails.configuration timeout reaches the real Net::HTTP
+      # instance, rather than only being stored on Configuration. http.use_ssl
+      # is always true in verify, so even a plaintext loopback server that
+      # never responds stalls Net::HTTP in the TLS handshake, which Ruby times
+      # with open_timeout rather than read_timeout. read_timeout and
+      # write_timeout are assigned the same way, immediately before/after this
+      # line, but aren't independently exercised here: reaching them would
+      # require a loopback server that completes a real TLS handshake.
+      class VerificationSocketTimeoutTest < Minitest::Test
+        include VerificationTestHelpers
+
+        def teardown
+          super
+          Rails.configuration.open_timeout = 5
+        end
+
+        def test_configured_open_timeout_is_enforced_by_net_http
+          Rails.configuration.open_timeout = 0.2
+
+          with_unresponsive_server do
+            started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            err = assert_raises(ConfigurationError) { Verification.verify(response: @valid_token) }
+            elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+
+            assert_match(/timed out/, err.message)
+            assert_operator elapsed, :<, 2
+          end
+        end
+
+        private
+
+        # Points SITE_VERIFY_URL at a real TCP server that accepts connections
+        # and never writes a response, then restores the original constant.
+        # WebMock blocks real connections by default, so localhost is allowed
+        # only for the duration of the request.
+        def with_unresponsive_server
+          server = TCPServer.new('127.0.0.1', 0)
+          accept_thread = Thread.new { loop { server.accept } }
+
+          swap_site_verify_url("http://127.0.0.1:#{server.addr[1]}/siteverify") do
+            WebMock.disable_net_connect!(allow_localhost: true)
+            yield
+          end
+        ensure
+          WebMock.disable_net_connect!
+          accept_thread&.kill
+          server&.close
+        end
+
+        def swap_site_verify_url(url)
+          original = Cloudflare::SITE_VERIFY_URL
+          Cloudflare.send(:remove_const, :SITE_VERIFY_URL)
+          Cloudflare.const_set(:SITE_VERIFY_URL, url)
+          yield
+        ensure
+          Cloudflare.send(:remove_const, :SITE_VERIFY_URL)
+          Cloudflare.const_set(:SITE_VERIFY_URL, original)
         end
       end
 
