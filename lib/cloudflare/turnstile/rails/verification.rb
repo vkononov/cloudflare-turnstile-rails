@@ -58,8 +58,7 @@ module Cloudflare
 
           local_error = if missing_response?(response)
                           ErrorCode::MISSING_INPUT_RESPONSE
-                        elsif !response.is_a?(String) || response.strip.empty? ||
-                              response.length > Cloudflare::MAX_RESPONSE_LENGTH
+                        elsif invalid_response?(response)
                           ErrorCode::INVALID_INPUT_RESPONSE
                         end
 
@@ -112,6 +111,11 @@ module Cloudflare
           response.nil? || response == ''
         end
         private_class_method :missing_response?
+
+        def self.invalid_response?(response)
+          !response.is_a?(String) || response.strip.empty? || response.length > Cloudflare::MAX_RESPONSE_LENGTH
+        end
+        private_class_method :invalid_response?
       end
     end
   end
