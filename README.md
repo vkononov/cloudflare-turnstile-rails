@@ -14,8 +14,6 @@ Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rai
 > [!TIP]
 > **Using Devise?** [devise-cloudflare-turnstile](https://github.com/vkononov/devise-cloudflare-turnstile) protects every Devise form (sign in, sign up, password reset, and more) with no changes to your Devise views or controllers. It is built on this gem and shares its configuration, so you can use both to protect Devise and non-Devise forms in the same app.
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/vkononov)
-
 ## Features
 
 * **One‑line integration**: `<%= cloudflare_turnstile_tag %>` in views, `valid_turnstile?(model:)` in controllers — no extra wiring.
