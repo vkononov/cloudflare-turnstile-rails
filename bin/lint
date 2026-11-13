@@ -35,6 +35,10 @@ else
         npx eslint . --fix || { valid=false; }
 fi
 
+echo ""
+echo -e "${HIGHLIGHT_COLOR}Testing JavaScript widget lifecycle...${RESET_COLOR}"
+npm test || { valid=false; }
+
 # Printing summary
 if [[ "$valid" == false ]]; then
   echo -e "${ERROR_COLOR}"ERROR: Lint errors have been found in your code."${RESET_COLOR}"
