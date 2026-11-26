@@ -1,4 +1,5 @@
 require 'test_helper'
+require 'support/chrome_storage_reset'
 require 'support/turnstile_system_helpers'
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
