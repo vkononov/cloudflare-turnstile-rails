@@ -11,7 +11,8 @@ Cloudflare Turnstile gem for Ruby on Rails with built-in Turbo and Turbolinks su
 
 Supports **Rails 5.0 → latest** and **Ruby 2.6 → latest**, with the full Rails/Ruby matrix tested daily in CI.
 
-[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/vkononov)
+> [!TIP]
+> **Using Devise?** [devise-cloudflare-turnstile](https://github.com/vkononov/devise-cloudflare-turnstile) protects every Devise form (sign in, sign up, password reset, and more) with no changes to your Devise views or controllers. It is built on this gem and shares its configuration, so you can use both to protect Devise and non-Devise forms in the same app.
 
 ## Features
 
@@ -293,6 +294,22 @@ renders, and DOM mutations exactly as it does in lazy mode.
   end
   ```
 
+  The automatic message is a regular flash, so it survives exactly one redirect. If you **re-render the form** instead of redirecting, pass `flash: :now` to scope the message to that render, so it doesn't also appear on the next page the visitor opens:
+
+  ```ruby
+  def create
+    if valid_turnstile?(flash: :now)
+      # Passed: no message is set either way
+      redirect_to dashboard_path, notice: 'Success!'
+    else
+      # Failed: flash.now[:alert] is automatically set
+      render :new, status: :unprocessable_entity
+    end
+  end
+  ```
+
+  Passing a `model` is the other option for a re-rendered form: the failure goes to `model.errors` and no flash is set at all.
+
 * You may also pass additional **siteverify** parameters (e.g., `secret`, `response`, `remoteip`, `idempotency_key`) supported by Cloudflare's API:
   [Cloudflare Server-Side Validation Parameters](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/#required-parameters)
 
@@ -304,6 +321,16 @@ renders, and DOM mutations exactly as it does in lazy mode.
   else
     # Failed
     render :new, status: :unprocessable_entity
+  end
+  ```
+
+* Requests to Cloudflare time out after 5 seconds to connect, read, or write, so a slow Cloudflare can't tie up your app's request threads for long. A timeout raises `Cloudflare::Turnstile::Rails::ConfigurationError`. To change the limits:
+
+  ```ruby
+  Cloudflare::Turnstile::Rails.configure do |config|
+    config.open_timeout = 5  # connecting to siteverify
+    config.read_timeout = 5  # reading the response
+    config.write_timeout = 5 # sending the verification POST
   end
   ```
 
@@ -325,6 +352,8 @@ renders, and DOM mutations exactly as it does in lazy mode.
     flash[:error] = "Custom message: #{result.errors.join(', ')}"
   end
   ```
+
+* A missing, malformed, or oversized token fails immediately with `missing-input-response` or `invalid-input-response`, without a request to Cloudflare. The `VerificationResponse` for these failures only has `success` and `error-codes`; it doesn't carry `hostname`, `challenge_ts`, or the other fields a real siteverify call returns.
 
 * The `VerificationResponse` object contains the raw response from Cloudflare:
 

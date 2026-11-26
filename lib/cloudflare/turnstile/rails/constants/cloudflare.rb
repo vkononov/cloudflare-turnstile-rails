@@ -11,6 +11,9 @@ module Cloudflare
         # Default hidden input field name for Turnstile token submission
         RESPONSE_FIELD_NAME = 'cf-turnstile-response'.freeze
 
+        # Longest token siteverify accepts; anything longer is rejected without a request
+        MAX_RESPONSE_LENGTH = 2048
+
         # Default CSS class applied to Turnstile widget containers
         WIDGET_CLASS = 'cf-turnstile'.freeze
       end

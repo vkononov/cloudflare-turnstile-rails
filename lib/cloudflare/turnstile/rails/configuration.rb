@@ -7,7 +7,7 @@ module Cloudflare
       class Configuration
         attr_writer :script_url
         attr_accessor :site_key, :secret_key, :render, :onload, :default_data, :lazy_mount, :manual_render,
-                      :reserve_space, :auto_populate_response_in_test_env
+                      :reserve_space, :auto_populate_response_in_test_env, :open_timeout, :read_timeout, :write_timeout
 
         def initialize
           @script_url = Cloudflare::SCRIPT_URL
@@ -20,6 +20,7 @@ module Cloudflare
           @reserve_space = true
           @default_data = {}
           @auto_populate_response_in_test_env = true
+          @open_timeout = @read_timeout = @write_timeout = 5
         end
 
         # True when the api.js URL we are actually going to load carries

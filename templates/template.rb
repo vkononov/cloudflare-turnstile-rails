@@ -5,6 +5,7 @@ source_paths.unshift(shared)
 # 2) inject our gem under test into the Gemfile
 append_to_file 'Gemfile', <<~RUBY
   gem 'appraisal', require: false
+  gem 'json', '< 3'
   gem 'minitest-retry', require: false
   gem 'rails-controller-testing'
 

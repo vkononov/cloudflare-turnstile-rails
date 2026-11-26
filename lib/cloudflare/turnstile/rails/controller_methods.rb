@@ -17,10 +17,18 @@ module Cloudflare
           result
         end
 
-        def valid_turnstile?(model: nil, **opts)
+        # flash: :keep carries the automatic failure message into the next request,
+        # for a redirect. flash: :now scopes it to the response being rendered. The
+        # keyword shadows the controller's own flash method, hence request.flash.
+        def valid_turnstile?(model: nil, flash: :keep, **opts)
           response = verify_turnstile(model: model, **opts)
           success = response.is_a?(VerificationResponse) && response.success?
-          flash[:alert] = ErrorMessage.default if !success && model.nil?
+
+          if !success && model.nil?
+            store = flash == :now ? request.flash.now : request.flash
+            store[:alert] = ErrorMessage.default
+          end
+
           success
         end
 

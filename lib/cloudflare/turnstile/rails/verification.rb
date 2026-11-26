@@ -2,6 +2,7 @@ require 'net/http'
 require 'openssl'
 
 require_relative 'constants/cloudflare'
+require_relative 'constants/error_code'
 
 module Cloudflare
   module Turnstile
@@ -48,12 +49,24 @@ module Cloudflare
 
       module Verification
         def self.verify(response: nil, secret: nil, remoteip: nil, idempotency_key: nil) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength, Metrics/PerceivedComplexity
+          if response.is_a?(String) && !response.valid_encoding?
+            return VerificationResponse.new('success' => false, 'error-codes' => [ErrorCode::INVALID_INPUT_RESPONSE])
+          end
+
           response = 'dummy-response' if auto_populate_test_response?(response)
 
           secret ||= Rails.configuration.secret_key
           if secret.nil? || secret.strip.empty?
             raise ConfigurationError, ErrorMessage.for(ErrorCode::MISSING_INPUT_SECRET)
           end
+
+          local_error = if missing_response?(response)
+                          ErrorCode::MISSING_INPUT_RESPONSE
+                        elsif invalid_response?(response)
+                          ErrorCode::INVALID_INPUT_RESPONSE
+                        end
+
+          return VerificationResponse.new('success' => false, 'error-codes' => [local_error]) if local_error
 
           body = { 'secret' => secret, 'response' => response }
           body['remoteip'] = remoteip if remoteip
@@ -65,17 +78,20 @@ module Cloudflare
 
           http = Net::HTTP.new(uri.host, uri.port)
           http.use_ssl = true
+          http.open_timeout = Rails.configuration.open_timeout
+          http.read_timeout = Rails.configuration.read_timeout
+          http.write_timeout = Rails.configuration.write_timeout
           http.verify_mode = OpenSSL::SSL::VERIFY_PEER
           http.cert_store = OpenSSL::X509::Store.new
           http.cert_store.set_default_paths
 
           begin
             res = http.request(request)
-          rescue Net::OpenTimeout, Net::ReadTimeout => e
+          rescue Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Errno::ETIMEDOUT => e
             raise ConfigurationError, "Turnstile verification timed out: #{e.message}"
           rescue OpenSSL::SSL::SSLError => e
             raise ConfigurationError, "SSL verification failed: #{e.message}"
-          rescue SocketError, Errno::ECONNREFUSED => e
+          rescue SocketError, EOFError, Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH => e
             raise ConfigurationError, "Network error during Turnstile verification: #{e.message}"
           end
 
@@ -89,11 +105,21 @@ module Cloudflare
         end
 
         def self.auto_populate_test_response?(response)
-          (response.nil? || response.strip.empty?) &&
+          (response.nil? || (response.is_a?(String) && response.strip.empty?)) &&
             ::Rails.env.test? &&
             Rails.configuration.auto_populate_response_in_test_env
         end
         private_class_method :auto_populate_test_response?
+
+        def self.missing_response?(response)
+          response.nil? || response == ''
+        end
+        private_class_method :missing_response?
+
+        def self.invalid_response?(response)
+          !response.is_a?(String) || response.strip.empty? || response.length > Cloudflare::MAX_RESPONSE_LENGTH
+        end
+        private_class_method :invalid_response?
       end
     end
   end
