@@ -87,4 +87,30 @@ class ModalDemoTest < ApplicationSystemTestCase
 
     assert_text 'Modal demo verified.'
   end
+
+  test 'opening the modal mounts the widget after arriving through a Turbo visit' do
+    # Turbo Drive and Turbolinks replace <body> on every visit, so this covers
+    # the helper booting on one page and then having to follow the next one.
+    visit lazy_demo_url
+    skip 'Neither Turbo nor Turbolinks is loaded' unless page_navigation_library?
+
+    # The reservation is applied by the helper at boot, so it proves the helper
+    # is running on this first page.
+    assert_selector 'div.cf-turnstile[data-turnstile-reserved]', visible: :all
+
+    execute_script('window.__sameDocument = true;')
+    click_link 'Modal demo'
+
+    assert_text 'Modal-hidden Turnstile demo'
+    assert evaluate_script('window.__sameDocument === true'), 'expected a Turbo visit, not a full page load'
+
+    click_on 'Open modal'
+    wait_for_turnstile_inputs(1, message: 'after opening the modal reached through a Turbo visit')
+  end
+
+  private
+
+  def page_navigation_library?
+    evaluate_script('typeof Turbo !== "undefined" || typeof Turbolinks !== "undefined"')
+  end
 end

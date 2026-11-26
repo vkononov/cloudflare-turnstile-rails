@@ -393,10 +393,9 @@ All widgets will re‑initialize automatically on Turbo navigations (`turbo:rend
 The gem also cleans up after itself on `turbo:before-cache` (and
 `turbolinks:before-cache`). Turbo caches a page by cloning its DOM and restores
 that clone on a back/forward navigation without asking the server for anything,
-so a rendered widget would come back complete with its iframe and, more to the
-point, the hidden input holding a token that has already been spent or has since
-expired — and the gem's own "already mounted" check would see the iframe and
-leave it alone. Submitting that form fails verification with no way out short of
+so a rendered widget would come back complete with the hidden input holding a
+token that has already been spent or has since expired — and the gem's own
+"already mounted" check would see that input and leave the widget alone. Submitting that form fails verification with no way out short of
 a reload. To avoid it, the gem dismisses each widget through
 `turnstile.remove()` and empties the placeholder just before the snapshot is
 taken, so the restored copy mounts again and gets a fresh token. Space
@@ -610,15 +609,13 @@ Then call `turnstile.render` yourself for those, e.g. inside `cfTurnstile.ensure
 ## Troubleshooting
 
 **Lazy mounting in tests**
-- Capybara's `visit` doesn't fire a pointer event, so the first-gesture trigger doesn't kick in until your test actually clicks something. If you want a system test to render a widget immediately, either click somewhere first or call the gem's helper:
+- Capybara's `visit` doesn't fire a pointer event, so the first-gesture trigger doesn't kick in until your test actually clicks something. If you want a system test to render a widget immediately, either click somewhere first or force-mount every widget through the public JavaScript API:
 
   ```ruby
   visit new_book_url
-  mount_turnstile_widgets! # calls window.cfTurnstile.mountAll() under the hood
-  wait_for_turnstile_inputs(1)
+  page.execute_script('window.cfTurnstile.mountAll()')
+  assert_selector "input[name='cf-turnstile-response']", visible: :all
   ```
-
-  In your own apps, use `page.execute_script('window.cfTurnstile.mountAll()')`.
 
 **Explicit Rendering**
 - If you've configured explicit mode (`config.render = 'explicit'`) but widgets still auto-render, override the default container class:

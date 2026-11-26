@@ -21,6 +21,12 @@ const HELPER_SRC = readFileSync(HELPER_PATH, 'utf8');
 
 const DEFAULT_API_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 
+// The light DOM Cloudflare's api.js leaves in a container it renders. The
+// challenge iframe lives in a closed shadow root on the wrapper, so all that
+// is reachable from the page is the wrapper and the hidden token input.
+const RENDERED_WIDGET_HTML =
+  '<div><div></div><input type="hidden" name="cf-turnstile-response" value="tok-abc"></div>';
+
 // ---------- per-test fixture ----------
 
 let dom;
@@ -313,21 +319,21 @@ describe('isAlreadyMounted (via mount)', () => {
     expect(getInjectedApiScript()).toBeUndefined();
   });
 
-  test('skips mount when the element already contains an iframe (Cloudflare auto-render)', () => {
-    // render=auto drops the iframe in without going through our mount()
-    // path, so the marker is never set. The iframe lookup catches this.
+  test('skips mount when the element already holds a response input (Cloudflare auto-render)', () => {
+    // render=auto renders without going through our mount() path, so the
+    // marker is never set. The response input is the only light-DOM trace.
     const el = placeholder();
-    el.appendChild(doc.createElement('iframe'));
+    el.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
     bootHelper();
 
     win.cfTurnstile.mount(el);
     expect(getInjectedApiScript()).toBeUndefined();
   });
 
-  test('proceeds with mount when the element contains a non-iframe placeholder child (e.g. a spinner)', () => {
+  test('proceeds with mount when the element contains consumer content (e.g. a spinner)', () => {
     // Consumers sometimes put loading/fallback content inside the
     // placeholder. That content must NOT lock the widget out of being
-    // mounted — only an actual Cloudflare iframe should.
+    // mounted — only an actual Turnstile response input should.
     const el = placeholder();
     const spinner = doc.createElement('span');
     spinner.textContent = 'Loading...';
@@ -347,19 +353,6 @@ describe('isAlreadyMounted (via mount)', () => {
     expect(el.dataset.turnstileRendered).toBe('true');
   });
 
-  test('skips mount when an iframe is nested deep inside the placeholder', () => {
-    // The marker normally lives directly under the placeholder, but be
-    // defensive — Cloudflare could change the structure. querySelector
-    // (vs childElementCount) walks the subtree.
-    const el = placeholder();
-    const wrapper = doc.createElement('div');
-    wrapper.appendChild(doc.createElement('iframe'));
-    el.appendChild(wrapper);
-    bootHelper();
-
-    win.cfTurnstile.mount(el);
-    expect(getInjectedApiScript()).toBeUndefined();
-  });
 });
 
 describe('IntersectionObserver path', () => {
@@ -489,6 +482,57 @@ describe('MutationObserver path', () => {
     expect(renderSpy.mock.calls[0][0]).toBe(el);
   });
 
+  describe('after a Turbo visit replaces <body>', () => {
+    // Turbo Drive and Turbolinks swap in a brand-new <body> element on every
+    // visit rather than updating the existing one.
+    function visitNewPage(bodyHtml) {
+      const newBody = doc.createElement('body');
+      newBody.innerHTML = bodyHtml;
+      doc.body.replaceWith(newBody);
+      fireGesture('turbo:render');
+    }
+
+    test('a widget inserted into the new page later is mounted when its form is used', async () => {
+      const first = placeholder();
+      bootHelper();
+      ioInstances[0].trigger(first);
+      const render = resolveApiJs();
+
+      visitNewPage('<div id="slot"></div>');
+      await flushMicrotasks();
+
+      doc.getElementById('slot').innerHTML =
+        '<form><input id="email"><div class="cf-turnstile"></div></form>';
+      await flushMicrotasks();
+
+      const el = doc.querySelector('.cf-turnstile');
+      expect(ioInstances[0].observed.indexOf(el) !== -1).toBe(true);
+
+      doc.getElementById('email').dispatchEvent(new win.FocusEvent('focusin', { bubbles: true }));
+      await flushMacrotasks();
+
+      expect(render.mock.calls.some((call) => call[0] === el)).toBe(true);
+    });
+
+    test('a widget in a closed modal on the new page mounts when the modal opens', async () => {
+      const renderSpy = vi.fn();
+      bootHelper();
+      win.turnstile = { render: renderSpy };
+
+      visitNewPage('<div id="modal" style="display: none"><div class="cf-turnstile"></div></div>');
+      await flushMicrotasks();
+
+      expect(renderSpy).not.toHaveBeenCalled();
+
+      doc.getElementById('modal').style.display = '';
+      await flushMicrotasks();
+      await flushMacrotasks();
+
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+      expect(renderSpy.mock.calls[0][0] === doc.querySelector('.cf-turnstile')).toBe(true);
+    });
+  });
+
   test('attribute mutations on an unrelated element do not mount below-fold widgets', async () => {
     // Below-fold widgets that were already laid out at observe-time
     // should NOT get force-mounted just because some unrelated style
@@ -579,16 +623,9 @@ describe('Turbo / Turbolinks hooks', () => {
 });
 
 describe('Turbo page cache (before-cache teardown)', () => {
-  // Stand in for what Cloudflare's api.js actually does to a container it
-  // renders: an iframe for the challenge, plus the hidden input carrying the
-  // token that the surrounding form submits.
   function resolveWithWidget({ id = 'widget-1', remove = vi.fn() } = {}) {
     const render = vi.fn((target) => {
-      target.insertAdjacentHTML(
-        'beforeend',
-        '<iframe src="about:blank"></iframe>' +
-          '<input type="hidden" name="cf-turnstile-response" value="tok-abc">'
-      );
+      target.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
       return id;
     });
 
@@ -604,10 +641,7 @@ describe('Turbo page cache (before-cache teardown)', () => {
     ioInstances[0].trigger(el);
     const { render } = resolveWithWidget();
 
-    // Identity rather than toHaveBeenCalledWith: deep-equalling an element
-    // that now contains an iframe sends vitest's comparator into the frame.
     expect(render.mock.calls[0][0] === el).toBe(true);
-    expect(el.querySelector('iframe')).not.toBeNull();
     expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
 
     fireGesture('turbo:before-cache');
@@ -615,7 +649,6 @@ describe('Turbo page cache (before-cache teardown)', () => {
     // The spent token is the dangerous half: it would be submitted verbatim
     // by the restored page.
     expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
-    expect(el.querySelector('iframe')).toBeNull();
     expect(el.dataset.turnstileRendered).toBeUndefined();
   });
 
@@ -637,9 +670,6 @@ describe('Turbo page cache (before-cache teardown)', () => {
     doc.body.appendChild(restored);
     fireGesture('turbo:render');
 
-    // Compared as booleans on purpose: a failing DOM-node comparison makes
-    // vitest serialize the node, and serializing one that contains an iframe
-    // blows up with an unrelated TypeError that hides the real assertion.
     expect(ioInstances[0].observed.indexOf(restored) !== -1).toBe(true);
 
     ioInstances[0].trigger(restored);
@@ -683,14 +713,14 @@ describe('Turbo page cache (before-cache teardown)', () => {
     bootHelper({ mountMode: 'eager' });
 
     // render=auto: Cloudflare mounts the widget without going through mount(),
-    // so the only evidence is the iframe.
-    el.insertAdjacentHTML('beforeend', '<iframe src="about:blank"></iframe>');
+    // so the only evidence is the response input.
+    el.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
 
     expect(el.dataset.turnstileRendered).toBeUndefined();
 
     fireGesture('turbo:before-cache');
 
-    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
   });
 
   test('leaves a placeholder that never mounted exactly as it was', () => {
@@ -713,7 +743,7 @@ describe('Turbo page cache (before-cache teardown)', () => {
 
     fireGesture('turbolinks:before-cache');
 
-    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
     expect(el.dataset.turnstileRendered).toBeUndefined();
   });
 
@@ -729,7 +759,7 @@ describe('Turbo page cache (before-cache teardown)', () => {
 
     fireGesture('turbo:before-cache');
 
-    expect(el.querySelector('iframe')).toBeNull();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
     expect(el.dataset.turnstileRendered).toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
   });
@@ -737,11 +767,11 @@ describe('Turbo page cache (before-cache teardown)', () => {
   test('passive mode never tears down the host app\'s widgets', () => {
     const el = placeholder();
     bootHelper({ mountMode: 'passive' });
-    el.insertAdjacentHTML('beforeend', '<iframe src="about:blank"></iframe>');
+    el.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
 
     fireGesture('turbo:before-cache');
 
-    expect(el.querySelector('iframe')).not.toBeNull();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
   });
 });
 
