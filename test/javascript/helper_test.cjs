@@ -8,19 +8,19 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname,
   '../../lib/cloudflare/turnstile/rails/assets/javascripts/cloudflare_turnstile_helper.js'), 'utf8');
 
-test('explicit widgets render after readiness and on subsequent Turbolinks visits', () => {
+test('explicit widgets render once api.js loads and on subsequent Turbolinks visits', () => {
   const events = {};
   const scriptEvents = {};
   let widgets = [{ dataset: {}, childElementCount: 0 }];
   let renders = 0;
-  let ready;
+  let apiScript;
   let appended = 0;
   const context = {
     console,
     document: {
       currentScript: { getAttribute: () => 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', nonce: 'nonce' },
       createElement: () => ({ addEventListener: (name, callback) => { scriptEvents[name] = callback; } }),
-      head: { appendChild: (script) => { appended++; assert.equal(script.nonce, 'nonce'); } },
+      head: { appendChild: (script) => { appended++; apiScript = script; assert.equal(script.nonce, 'nonce'); } },
       addEventListener: (name, callback) => { events[name] = callback; },
       querySelectorAll: () => widgets
     }
@@ -29,13 +29,16 @@ test('explicit widgets render after readiness and on subsequent Turbolinks visit
   vm.createContext(context);
   vm.runInContext(source, context);
   assert.equal(renders, 0);
+  // Like the real api.js, ready() refuses to run when the script was loaded async or deferred.
   context.turnstile = {
-    ready: (callback) => { ready = callback; },
+    ready: () => {
+      if (apiScript.async || apiScript.defer) {
+        throw new Error('Remove async/defer from the Turnstile api.js script tag before using turnstile.ready()');
+      }
+    },
     render: () => { renders++; }
   };
   scriptEvents.load();
-  assert.equal(renders, 0);
-  ready();
   assert.equal(renders, 1);
   events['turbolinks:load']();
   assert.equal(renders, 1);
