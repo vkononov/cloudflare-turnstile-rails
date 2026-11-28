@@ -268,7 +268,8 @@ describe('injectApiScript', () => {
     );
   });
 
-  test('onerror resets loadState so a later mount() retries the injection', () => {
+  test('a failed load removes its tag and an explicit API call retries it', () => {
+    const el = placeholder();
     bootHelper();
     win.cfTurnstile.ensureLoaded(() => {});
     const first = getInjectedApiScript();
@@ -278,12 +279,15 @@ describe('injectApiScript', () => {
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('failed to load Cloudflare Turnstile api.js')
     );
+    expect(first.isConnected).toBe(false);
 
-    // Drop the failed tag so the next call creates a fresh one we can assert on.
-    first.remove();
+    win.cfTurnstile.mount(el);
+    const retry = getInjectedApiScript();
+    expect(retry).toBeTruthy();
+    expect(retry).not.toBe(first);
 
-    win.cfTurnstile.ensureLoaded(() => {});
-    expect(getInjectedApiScript()).toBeTruthy();
+    const render = resolveApiJs();
+    expect(render).toHaveBeenCalledWith(el);
   });
 
   test('does not double-inject api.js while already loading', () => {
@@ -1369,6 +1373,70 @@ describe('attribute-driven reveal (native <dialog> and friends)', () => {
     expect(render).toHaveBeenCalledTimes(1);
     expect(render.mock.calls[0][0]).toBe(hidden);
     expect(visible.dataset.turnstileRendered).toBeUndefined();
+  });
+});
+
+describe('after api.js fails to load', () => {
+  function apiScriptCount() {
+    return Array.from(doc.head.querySelectorAll('script'))
+      .filter((s) => s.src && s.src.indexOf('api.js') !== -1).length;
+  }
+
+  function failedLoadWithFormWidget() {
+    const form = doc.createElement('form');
+    const input = doc.createElement('input');
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    form.appendChild(input);
+    form.appendChild(el);
+    doc.body.appendChild(form);
+    bootHelper();
+
+    input.dispatchEvent(new win.Event('focusin', { bubbles: true }));
+    getInjectedApiScript().onerror();
+    return { input, el };
+  }
+
+  test('automatic triggers do not request api.js again', async () => {
+    const { input, el } = failedLoadWithFormWidget();
+    const hidden = doc.createElement('div');
+    hidden.style.display = 'none';
+    const modalWidget = doc.createElement('div');
+    modalWidget.className = 'cf-turnstile';
+    hidden.appendChild(modalWidget);
+    doc.body.appendChild(hidden);
+    await flushMicrotasks();
+
+    for (let n = 0; n < 5; n++) {
+      input.dispatchEvent(new win.Event('pointerover', { bubbles: true }));
+    }
+    fireGesture('pointerdown');
+    ioInstances[0].trigger(el);
+    hidden.style.display = 'block';
+    await flushMicrotasks();
+
+    expect(apiScriptCount()).toBe(0);
+  });
+
+  test('a Turbo visit to a new page lets the triggers retry', () => {
+    failedLoadWithFormWidget();
+
+    const newBody = doc.createElement('body');
+    const form = doc.createElement('form');
+    const input = doc.createElement('input');
+    const el = doc.createElement('div');
+    el.className = 'cf-turnstile';
+    form.appendChild(input);
+    form.appendChild(el);
+    newBody.appendChild(form);
+    doc.documentElement.replaceChild(newBody, doc.body);
+    doc.dispatchEvent(new win.Event('turbo:render'));
+
+    input.dispatchEvent(new win.Event('focusin', { bubbles: true }));
+
+    expect(apiScriptCount()).toBe(1);
+    const render = resolveApiJs();
+    expect(render).toHaveBeenCalledWith(el);
   });
 });
 
