@@ -865,6 +865,18 @@ describe('eager mode (data-mount-mode=eager)', () => {
     expect(render).toHaveBeenCalledWith(el);
   });
 
+  test('skips a widget Cloudflare auto-rendered with a custom response field name', () => {
+    const el = placeholder({ 'data-response-field-name': 'captcha-token' });
+    bootHelper({ mountMode: 'eager' });
+
+    const render = vi.fn();
+    win.turnstile = { render };
+    el.insertAdjacentHTML('beforeend', '<div><div></div><input type="hidden" name="captcha-token" value="tok"></div>');
+    getInjectedApiScript().onload();
+
+    expect(render).not.toHaveBeenCalled();
+  });
+
   test('does not register the first-gesture trigger', () => {
     placeholder({ 'data-turnstile-rendered': 'true' });
     bootHelper({ mountMode: 'eager' });
