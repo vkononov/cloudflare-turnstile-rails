@@ -210,7 +210,7 @@ actually render at:
 | `data-size` | Reserved `min-height` |
 |---|---|
 | `normal` (default) / `flexible` | `65px` |
-| `compact` | `120px` |
+| `compact` | `140px` |
 
 The server-rendered markup carries the height as a `data-reserve-height`
 attribute only. The helper applies it as a `min-height` through the CSSOM when
@@ -553,7 +553,7 @@ If you run into any issues after upgrading Rails, please [open an issue](https:/
 
 v2.0 introduces lazy mounting and changes a handful of defaults. Here's what to expect.
 
-**TL;DR — most apps need zero changes.** The widget will start rendering on first user interaction (or scroll-into-view) instead of on `DOMContentLoaded`, and that's it.
+**TL;DR — most apps need zero changes.** The widget will start rendering on first user interaction (or scroll-into-view) instead of on `DOMContentLoaded`. Apps whose own JavaScript uses `window.turnstile` need a small change; see the decision matrix below.
 
 #### What changed
 
@@ -563,14 +563,16 @@ v2.0 introduces lazy mounting and changes a handful of defaults. Here's what to 
 | `api.js` load timing | On every page load | When the widget is needed |
 | Widget render timing | Immediately after `api.js` loads | When the widget is needed — viewport, form interaction, reveal, first gesture, or `cfTurnstile.mountAll()` |
 | New JS API | – | `window.cfTurnstile.{ensureLoaded, mount, mountAll, mountMode}` |
-| Placeholder `min-height` | None | Size-aware (`65px` / `120px`) reserved in lazy mode to prevent CLS |
+| Placeholder `min-height` | None | Size-aware (`65px` / `140px`) reserved in lazy mode to prevent CLS |
 | New config | – | `lazy_mount`, `manual_render`, `reserve_space` |
 
 #### Decision matrix
 
 Your upgrade path depends on whether you rendered widgets yourself in v1.x:
 
-* **You never set `config.render` in v1.x** (the most common case): no action required. Lazy mounting is on by default and works out of the box.
+* **You never set `config.render` in v1.x** (the most common case): usually no action required. Lazy mounting is on by default and works out of the box.
+  * If your JavaScript uses `window.turnstile` directly, for example `turnstile.reset()` or `turnstile.getResponse()`, wrap those calls in `cfTurnstile.ensureLoaded(...)`. `api.js` now loads only when a widget is needed, so `window.turnstile` can be undefined when your code runs.
+  * If your JavaScript calls `turnstile.render(el)` on a `.cf-turnstile` placeholder it inserted, for example after an Ajax form replacement, call `cfTurnstile.mount(el)` instead.
 * **You set `config.render = 'explicit'` in v1.x and called `turnstile.render(...)` yourself from JavaScript**: set `config.manual_render = true`. The gem loads `api.js` for you and renders nothing, so your existing code keeps working exactly as before.
   * If you'd rather hand rendering over to the gem, delete your manual `turnstile.render(...)` calls instead and leave the defaults alone.
   * `config.lazy_mount = false` is *not* the right setting here: it makes the gem render widgets eagerly, which would collide with your own `render()` calls (Turnstile error 300030).

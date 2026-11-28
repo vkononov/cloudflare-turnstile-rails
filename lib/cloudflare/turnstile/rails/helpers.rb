@@ -5,9 +5,9 @@ module Cloudflare
     module Rails
       module Helpers
         # Heights Cloudflare's iframe settles at, keyed by `data-size`.
-        # `compact` is 130x120; everything else (`normal`, `flexible`) is 65px
+        # `compact` is 150x140; everything else (`normal`, `flexible`) is 65px
         # tall.
-        COMPACT_RESERVATION_HEIGHT = 120
+        COMPACT_RESERVATION_HEIGHT = 140
         DEFAULT_RESERVATION_HEIGHT = 65
 
         def cloudflare_turnstile_tag(site_key: nil, include_script: true, reserve_space: nil, **html_options) # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/MethodLength

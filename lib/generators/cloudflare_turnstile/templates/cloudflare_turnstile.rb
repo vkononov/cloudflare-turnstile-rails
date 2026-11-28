@@ -57,7 +57,7 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # Optional: Reserve vertical space for the widget to prevent Cumulative Layout Shift.
   #
   # In lazy mode the widget's box doesn't exist until it mounts, so the page would jump when the
-  # iframe swaps in. The gem reserves a matching `min-height` (65px, or 120px for `size: 'compact'`)
+  # iframe swaps in. The gem reserves a matching `min-height` (65px, or 140px for `size: 'compact'`)
   # from JavaScript and releases it once the widget renders. It never overrides a `min-height` you
   # set yourself, and applies only in lazy mode.
   #

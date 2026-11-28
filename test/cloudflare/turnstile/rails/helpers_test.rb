@@ -176,10 +176,10 @@ module Cloudflare
                        'an inline style attribute would require unsafe-inline and break strict CSP')
         end
 
-        test 'reserved height is 120 for compact widgets to match the Cloudflare iframe' do
+        test 'reserved height is 140 for compact widgets to match the Cloudflare iframe' do
           html = cloudflare_turnstile_tag(data: { size: 'compact' })
 
-          assert_match(/data-reserve-height="120"/, html)
+          assert_match(/data-reserve-height="140"/, html)
         end
 
         test 'reserved height is 65 for explicit normal and flexible sizes' do
@@ -190,7 +190,7 @@ module Cloudflare
         test 'a literal data-size html option also drives the reservation' do
           html = cloudflare_turnstile_tag('data-size': 'compact')
 
-          assert_match(/data-reserve-height="120"/, html)
+          assert_match(/data-reserve-height="140"/, html)
         end
 
         test 'a caller-supplied style is left alone and still gets a reservation' do
