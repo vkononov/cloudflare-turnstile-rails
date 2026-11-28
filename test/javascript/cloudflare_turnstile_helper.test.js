@@ -184,6 +184,29 @@ describe('public API surface', () => {
     expect(reAddedEvents).not.toContain('turbo:before-cache');
     expect(reAddedEvents).not.toContain('turbolinks:before-cache');
   });
+
+  test('Turbo re-running the helper on a visit still loads api.js only once', async () => {
+    placeholder();
+    bootHelper();
+
+    // Turbo swaps in the next page's body, whose helper <script> runs again.
+    const newBody = doc.createElement('body');
+    doc.documentElement.replaceChild(newBody, doc.body);
+    const el = placeholder();
+    bootHelper();
+    await flushMicrotasks();
+    doc.dispatchEvent(new win.Event('turbo:render'));
+
+    ioInstances.forEach((io) => io.trigger(el));
+
+    const apiScripts = Array.from(doc.querySelectorAll('script'))
+      .filter((s) => s.src && s.src.indexOf('api.js') !== -1);
+    expect(apiScripts).toHaveLength(1);
+
+    const render = resolveApiJs();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledWith(el);
+  });
 });
 
 describe('injectApiScript', () => {
