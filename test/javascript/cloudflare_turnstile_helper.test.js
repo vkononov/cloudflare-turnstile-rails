@@ -983,6 +983,26 @@ describe('gesture trigger', () => {
     // pending an intersection (or a manual mountAll).
     expect(second.dataset.turnstileRendered).toBeUndefined();
   });
+
+  test.each([['turbo:render'], ['turbolinks:load']])(
+    'a %s visit re-arms the gesture trigger for the incoming page',
+    async (eventName) => {
+      placeholder();
+      bootHelper();
+      fireGesture('pointerdown');
+      const render = resolveApiJs();
+
+      const newBody = doc.createElement('body');
+      doc.documentElement.replaceChild(newBody, doc.body);
+      const next = placeholder();
+      await flushMicrotasks();
+      fireGesture(eventName);
+      fireGesture('pointerdown');
+      await flushMacrotasks();
+
+      expect(render).toHaveBeenCalledWith(next);
+    }
+  );
 });
 
 describe('hidden-in-modal visibility filter', () => {
