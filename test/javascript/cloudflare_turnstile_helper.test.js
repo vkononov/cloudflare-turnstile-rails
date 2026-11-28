@@ -181,8 +181,6 @@ describe('public API surface', () => {
     expect(reAddedEvents).not.toContain('turbo:frame-load');
     expect(reAddedEvents).not.toContain('turbolinks:load');
     expect(reAddedEvents).not.toContain('turbo:before-stream-render');
-    expect(reAddedEvents).not.toContain('turbo:before-cache');
-    expect(reAddedEvents).not.toContain('turbolinks:before-cache');
   });
 
   test('Turbo re-running the helper on a visit still loads api.js only once', async () => {
@@ -645,11 +643,13 @@ describe('Turbo / Turbolinks hooks', () => {
   });
 });
 
-describe('Turbo page cache (before-cache teardown)', () => {
+describe('Turbo page cache', () => {
   function resolveWithWidget({ id = 'widget-1', remove = vi.fn() } = {}) {
+    let count = 0;
     const render = vi.fn((target) => {
       target.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
-      return id;
+      count++;
+      return count === 1 ? id : `${id}-${count}`;
     });
 
     win.turnstile = { render, remove };
@@ -658,155 +658,126 @@ describe('Turbo page cache (before-cache teardown)', () => {
     return { render, remove };
   }
 
-  test('empties a mounted widget out of the page before the snapshot is taken', () => {
-    const el = placeholder({ 'data-reserve-height': '65' });
+  // Turbo caches a page by cloning it and later swaps that clone in as the
+  // new <body>, firing `eventName` once it is on the page.
+  function leaveAndRestore(eventName = 'turbo:render') {
+    const snapshot = doc.body.cloneNode(true);
+
+    const nextPage = doc.createElement('body');
+    nextPage.innerHTML = '<p>Another page</p>';
+    doc.body.replaceWith(nextPage);
+    fireGesture(eventName);
+
+    doc.body.replaceWith(snapshot);
+    fireGesture(eventName);
+
+    return snapshot.querySelector('.cf-turnstile');
+  }
+
+  test.each(['turbo:render', 'turbolinks:load'])(
+    'a widget restored by %s is cleared and mounted again with a fresh token',
+    async (eventName) => {
+      const el = placeholder({ 'data-reserve-height': '65' });
+      bootHelper();
+      ioInstances[0].trigger(el);
+      const { render, remove } = resolveWithWidget({ id: 'widget-42' });
+
+      const restored = leaveAndRestore(eventName);
+
+      expect(remove).toHaveBeenCalledWith('widget-42');
+      expect(restored.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
+      expect(restored.dataset.turnstileRendered).toBeUndefined();
+      expect(restored.style.minHeight).toBe('65px');
+      expect(ioInstances[0].observed.indexOf(restored) !== -1).toBe(true);
+
+      ioInstances[0].trigger(restored);
+      await flushMacrotasks();
+
+      expect(render).toHaveBeenCalledTimes(2);
+      expect(render.mock.calls[1][0] === restored).toBe(true);
+      expect(restored.dataset.turnstileRendered).toBe('true');
+    }
+  );
+
+  test('a frame navigation that keeps the page leaves its live widgets alone', async () => {
+    const el = placeholder();
     bootHelper();
     ioInstances[0].trigger(el);
-    const { render } = resolveWithWidget();
+    const { render, remove } = resolveWithWidget();
 
-    expect(render.mock.calls[0][0] === el).toBe(true);
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
-
+    // A frame link with data-turbo-action="advance" fires both events while
+    // the page, and the widget the user may have solved, stays in place.
     fireGesture('turbo:before-cache');
-
-    // The spent token is the dangerous half: it would be submitted verbatim
-    // by the restored page.
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
-    expect(el.dataset.turnstileRendered).toBeUndefined();
-  });
-
-  test('a widget restored from a cached snapshot mounts again instead of staying spent', async () => {
-    const el = placeholder({ 'data-reserve-height': '65' });
-    bootHelper();
-    ioInstances[0].trigger(el);
-    const { render } = resolveWithWidget();
-
-    expect(render).toHaveBeenCalledTimes(1);
-
-    // Turbo caches by cloning the DOM after firing the event...
-    fireGesture('turbo:before-cache');
-    const restored = el.cloneNode(true);
-
-    // ...and a back navigation puts the clone on the page, with no request to
-    // the server that could have handed us a fresh placeholder.
-    el.remove();
-    doc.body.appendChild(restored);
     fireGesture('turbo:render');
-
-    expect(ioInstances[0].observed.indexOf(restored) !== -1).toBe(true);
-
-    ioInstances[0].trigger(restored);
+    await flushMicrotasks();
     await flushMacrotasks();
 
-    expect(render.mock.calls.length).toBe(2);
-    expect(render.mock.calls[1][0] === restored).toBe(true);
-    expect(restored.dataset.turnstileRendered).toBe('true');
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(remove).not.toHaveBeenCalled();
+    expect(el.querySelector('input[name="cf-turnstile-response"]').value).toBe('tok-abc');
   });
 
-  test('dismisses the widget through turnstile.remove with the id render returned', () => {
+  test('a live widget carried into the new page is not mistaken for a restored copy', async () => {
     const el = placeholder();
     bootHelper();
     ioInstances[0].trigger(el);
-    const { remove } = resolveWithWidget({ id: 'widget-42' });
+    const { render, remove } = resolveWithWidget();
 
-    fireGesture('turbo:before-cache');
+    // data-turbo-permanent moves the live element itself into the next body.
+    const nextPage = doc.createElement('body');
+    doc.body.replaceWith(nextPage);
+    nextPage.appendChild(el);
+    fireGesture('turbo:render');
+    await flushMacrotasks();
 
-    expect(remove).toHaveBeenCalledWith('widget-42');
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(remove).not.toHaveBeenCalled();
+    expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
   });
 
-  test('puts the space reservation back so the restored page does not jump', () => {
-    const el = placeholder({ 'data-reserve-height': '65' });
-    bootHelper();
-
-    expect(el.style.minHeight).toBe('65px');
-
-    ioInstances[0].trigger(el);
-    resolveWithWidget();
-
-    expect(el.style.minHeight).toBe('');
-
-    fireGesture('turbo:before-cache');
-
-    expect(el.style.minHeight).toBe('65px');
-    expect(el.hasAttribute('data-turnstile-reserved')).toBe(true);
-  });
-
-  test('also resets a widget Cloudflare auto-rendered, which carries no marker', () => {
+  test('a restored widget Cloudflare auto-rendered, which carries no marker, is rendered again', async () => {
     const el = placeholder();
     bootHelper({ mountMode: 'eager' });
-
-    // render=auto: Cloudflare mounts the widget without going through mount(),
-    // so the only evidence is the response input.
     el.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
+    const { render } = resolveWithWidget();
+    await flushMacrotasks();
 
-    expect(el.dataset.turnstileRendered).toBeUndefined();
+    expect(render).not.toHaveBeenCalled();
 
-    fireGesture('turbo:before-cache');
+    const restored = leaveAndRestore();
+    await flushMacrotasks();
 
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(render.mock.calls[0][0] === restored).toBe(true);
   });
 
-  test('leaves a placeholder that never mounted exactly as it was', () => {
+  test('a restored placeholder that never mounted keeps its own content', () => {
     const el = placeholder({ 'data-reserve-height': '65' });
     el.insertAdjacentHTML('beforeend', '<span class="spinner">Loading…</span>');
     bootHelper();
 
-    fireGesture('turbo:before-cache');
+    const restored = leaveAndRestore();
 
-    // Consumer-supplied fallback content is not ours to throw away.
-    expect(el.querySelector('.spinner')).not.toBeNull();
-    expect(el.style.minHeight).toBe('65px');
+    expect(restored.querySelector('.spinner')).not.toBeNull();
+    expect(restored.style.minHeight).toBe('65px');
   });
 
-  test('does not render again on the page being left when the widget started in a hidden modal', async () => {
-    const modal = doc.createElement('div');
-    modal.style.display = 'none';
-    doc.body.appendChild(modal);
-    const el = placeholder({ 'data-reserve-height': '65' });
-    modal.appendChild(el);
-    bootHelper();
-    const { render } = resolveWithWidget();
-
-    modal.style.display = 'block';
-    await flushMicrotasks();
-    await flushMacrotasks();
-
-    expect(render).toHaveBeenCalledTimes(1);
-
-    fireGesture('turbo:before-cache');
-    await flushMicrotasks();
-    await flushMacrotasks();
-
-    expect(render).toHaveBeenCalledTimes(1);
-  });
-
-  test('turbolinks:before-cache gets the same treatment', () => {
+  test('a remove() that throws is logged and the restored widget still mounts again', async () => {
     const el = placeholder();
     bootHelper();
     ioInstances[0].trigger(el);
-    resolveWithWidget();
-
-    fireGesture('turbolinks:before-cache');
-
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
-    expect(el.dataset.turnstileRendered).toBeUndefined();
-  });
-
-  test('a remove() that throws still leaves an empty placeholder behind', () => {
-    const el = placeholder();
-    bootHelper();
-    ioInstances[0].trigger(el);
-    resolveWithWidget({
+    const { render } = resolveWithWidget({
       remove: vi.fn(() => {
         throw new Error('unknown widget id');
       })
     });
 
-    fireGesture('turbo:before-cache');
+    const restored = leaveAndRestore();
+    ioInstances[0].trigger(restored);
+    await flushMacrotasks();
 
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).toBeNull();
-    expect(el.dataset.turnstileRendered).toBeUndefined();
     expect(warnSpy).toHaveBeenCalled();
+    expect(render).toHaveBeenCalledTimes(2);
   });
 
   describe.each(['lazy', 'eager'])('%s mode on a Turbo preview', (mountMode) => {
@@ -838,14 +809,14 @@ describe('Turbo page cache (before-cache teardown)', () => {
     );
   });
 
-  test('passive mode never tears down the host app\'s widgets', () => {
-    const el = placeholder();
+  test('passive mode never touches the host app\'s widgets', () => {
+    placeholder();
     bootHelper({ mountMode: 'passive' });
-    el.insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
+    doc.querySelector('.cf-turnstile').insertAdjacentHTML('beforeend', RENDERED_WIDGET_HTML);
 
-    fireGesture('turbo:before-cache');
+    const restored = leaveAndRestore();
 
-    expect(el.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
+    expect(restored.querySelector('input[name="cf-turnstile-response"]')).not.toBeNull();
   });
 });
 
