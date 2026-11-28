@@ -56,6 +56,8 @@ RUBY
   app/models/book.rb.tt
   app/views/layouts/application.html.erb
   app/views/pages/home.html.erb
+  app/views/pages/lazy_demo.html.erb
+  app/views/pages/modal_demo.html.erb
   app/views/contacts/new.html.erb
   app/views/books/create.js.erb
   app/views/books/_form.html.erb
@@ -65,11 +67,15 @@ RUBY
   config/initializers/content_security_policy.rb
   config/routes.rb
   test/application_system_test_case.rb
+  test/support/chrome_storage_reset.rb
   test/support/turnstile_system_helpers.rb
   test/controllers/books_controller_test.rb.tt
   test/controllers/contacts_controller_test.rb
+  test/integration/turnstile_helper_test.rb
   test/system/books_test.rb
   test/system/contacts_test.rb
+  test/system/lazy_mount_test.rb
+  test/system/modal_demo_test.rb
 ].each do |shared_path|
   if shared_path.end_with?('.tt')
     template shared_path, shared_path.sub(/\.tt$/, ''), force: true

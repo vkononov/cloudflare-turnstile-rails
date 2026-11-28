@@ -5,6 +5,8 @@ class ContactsTest < ApplicationSystemTestCase
     Cloudflare::Turnstile::Rails.configure do |config|
       config.site_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SITE_KEY', '1x00000000000000000000AA')
       config.secret_key = ENV.fetch('CLOUDFLARE_TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA')
+      config.render = 'explicit'
+      config.lazy_mount = true
     end
   end
 
@@ -13,16 +15,6 @@ class ContactsTest < ApplicationSystemTestCase
     wait_for_turnstile_inputs(1)
 
     assert_selector "div.cf-turnstile input[name='cf-turnstile-response']", count: 1, visible: :all
-  end
-
-  test 'explicit render mode renders the widget on the first page load' do
-    Cloudflare::Turnstile::Rails.configuration.render = 'explicit'
-    visit new_contact_url
-    wait_for_turnstile_inputs(1)
-
-    assert_selector "div.cf-turnstile input[name='cf-turnstile-response']", count: 1, visible: :all
-  ensure
-    Cloudflare::Turnstile::Rails.configuration.render = nil
   end
 
   test 'submitting contact form with passing turnstile shows success notice' do

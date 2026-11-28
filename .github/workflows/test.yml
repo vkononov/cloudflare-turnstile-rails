@@ -13,6 +13,22 @@ permissions:
   actions: write
 
 jobs:
+  js_test:
+    runs-on: ubuntu-latest
+    name: JavaScript unit tests
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install npm dependencies
+        run: npm install
+      - name: Run vitest
+        run: npm test
+
   test:
     runs-on: ubuntu-latest
     name: Ruby ${{ matrix.ruby }} / ${{ matrix.browser }}
@@ -45,14 +61,14 @@ jobs:
           path: /tmp/screenshots
           if-no-files-found: ignore
 
-  # Single stable status check that summarises the whole matrix above, so
+  # Single stable status check that summarises the test matrix and the JavaScript tests, so
   # branch protection can require one name ("Test") instead of every cell.
   test-result:
     name: Test
     if: always()
-    needs: test
+    needs: [test, js_test]
     runs-on: ubuntu-latest
     steps:
-      - name: Fail if any matrix job did not succeed
-        if: needs.test.result != 'success'
+      - name: Fail if any test job did not succeed
+        if: needs.test.result != 'success' || needs.js_test.result != 'success'
         run: exit 1

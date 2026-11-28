@@ -17,6 +17,14 @@ Gem::Specification.new do |spec|
   spec.metadata['source_code_uri'] = spec.homepage
   spec.metadata['changelog_uri'] = "#{spec.homepage}/releases"
 
+  spec.post_install_message = <<~MESSAGE
+    Upgrading from cloudflare-turnstile-rails v1.x? Since v2.0 the widget
+    renders only when it is needed. Apps whose own JavaScript calls
+    turnstile.render() may need changes. See the upgrade guide:
+
+      #{spec.homepage}#upgrading-from-v1x-to-v20
+  MESSAGE
+
   # Ship only what the gem needs at runtime: the library code (including its
   # generators, assets, and locales) plus the license and readme. Using an
   # allowlist keeps tests, tooling, CI config, and the sample app template out
