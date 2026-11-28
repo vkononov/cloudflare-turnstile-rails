@@ -49,9 +49,11 @@ Cloudflare::Turnstile::Rails.configure do |config|
   # `cfTurnstile.ensureLoaded(cb)`, but never renders, observes, or re-renders anything — you call
   # `turnstile.render(...)` yourself. This takes precedence over `lazy_mount`.
   #
-  # This is the setting to use if you were on v1.x with `config.render = 'explicit'` and your own
-  # render calls. Keep `render` set to 'explicit': otherwise Cloudflare auto-renders every widget
-  # and your own render() call fails with error 300030 (the gem warns on boot if it sees this).
+  # Use this only if your JavaScript renders every widget, including those from
+  # `cloudflare_turnstile_tag`. If it only renders placeholders it inserts later, keep the default and
+  # call `cfTurnstile.mount(el)` for them instead. Keep `render` set to 'explicit': otherwise Cloudflare
+  # auto-renders every widget and your own render() call fails with error 300030 (the gem warns on boot
+  # if it sees this).
   # config.manual_render = false
 
   # Optional: Reserve vertical space for the widget to prevent Cumulative Layout Shift.

@@ -161,6 +161,35 @@ describe('public API surface', () => {
     expect(typeof win.cfTurnstile.mountAll).toBe('function');
   });
 
+  test('runs functions queued before the helper loaded, and later pushes immediately', () => {
+    const calls = [];
+    win.cfTurnstileQueue = [
+      (api) => calls.push(['early', api]),
+      () => { throw new Error('boom'); },
+      (api) => calls.push(['after-error', api])
+    ];
+
+    bootHelper();
+
+    expect(calls).toEqual([['early', win.cfTurnstile], ['after-error', win.cfTurnstile]]);
+    expect(warnSpy).toHaveBeenCalledWith('cloudflare-turnstile-rails: queued callback failed', expect.any(Error));
+
+    win.cfTurnstileQueue.push((api) => calls.push(['late', api]));
+
+    expect(calls[2]).toEqual(['late', win.cfTurnstile]);
+  });
+
+  test('a queued ensureLoaded call loads api.js and runs once it is ready', () => {
+    const cb = vi.fn();
+    win.cfTurnstileQueue = [(api) => api.ensureLoaded(cb)];
+
+    bootHelper();
+    expect(cb).not.toHaveBeenCalled();
+    resolveApiJs();
+
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
   test('init guard: re-running the helper script does not re-install global listeners', () => {
     placeholder();
     bootHelper();

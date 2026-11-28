@@ -174,6 +174,16 @@ The helper exposes a small API on `window.cfTurnstile`:
 | `cfTurnstile.mountAll()`     | Renders every pending placeholder on the page. Useful when you reveal a hidden modal or want to force-render in tests.                                      |
 | `cfTurnstile.mountMode`      | The resolved mounting mode as a string — `'lazy'`, `'eager'`, or `'passive'`. Handy for asserting the configuration from a system test.                     |
 
+The helper script loads asynchronously, so `window.cfTurnstile` may not exist yet when your own code runs. To call it safely at any time, push a function onto `window.cfTurnstileQueue`. The helper calls it with the API once it loads, or immediately if it already has:
+
+```javascript
+(window.cfTurnstileQueue = window.cfTurnstileQueue || []).push(function(cfTurnstile) {
+  cfTurnstile.ensureLoaded(function() {
+    turnstile.reset();
+  });
+});
+```
+
 ```javascript
 // Programmatically reveal a modal containing a Turnstile widget. You don't
 // usually need to call mountAll() yourself — the IntersectionObserver picks
@@ -234,7 +244,7 @@ the Cloudflare dashboard, not a `data-size` value — the only valid sizes are
 
 #### Rendering widgets yourself
 
-If you already call `turnstile.render(...)` from your own JavaScript, tell the
+If your own JavaScript calls `turnstile.render(...)` for every widget, tell the
 gem to stay out of the way:
 
 ```ruby
@@ -243,8 +253,9 @@ config.manual_render = true
 
 The gem will still inject `api.js` (honouring your CSP nonce) and still expose
 `cfTurnstile.ensureLoaded(cb)`, but it will not render, observe, or re-render
-anything. This is the safe mode to pick if you were on v1.x with
-`config.render = 'explicit'` and your own render calls.
+anything, including widgets from `cloudflare_turnstile_tag`. If your code only
+renders placeholders it inserts later and relies on the gem for the rest, keep
+the defaults and call `cfTurnstile.mount(el)` for those placeholders instead.
 
 Keep `config.render = 'explicit'` when you do this. If the `api.js` URL doesn't
 carry `render=explicit`, Cloudflare's auto-render observer mounts every widget
@@ -574,10 +585,11 @@ v2.0 introduces lazy mounting and changes a handful of defaults. Here's what to 
 Your upgrade path depends on whether you rendered widgets yourself in v1.x:
 
 * **You never set `config.render` in v1.x** (the most common case): usually no action required. Lazy mounting is on by default and works out of the box.
-  * If your JavaScript uses `window.turnstile` directly, for example `turnstile.reset()` or `turnstile.getResponse()`, wrap those calls in `cfTurnstile.ensureLoaded(...)`. `api.js` now loads only when a widget is needed, so `window.turnstile` can be undefined when your code runs.
+  * If your JavaScript uses `window.turnstile` directly, for example `turnstile.reset()` or `turnstile.getResponse()`, wrap those calls in `cfTurnstile.ensureLoaded(...)`, pushed onto `window.cfTurnstileQueue` as shown in [Public JavaScript API](#public-javascript-api). `api.js` now loads only when a widget is needed, so `window.turnstile` can be undefined when your code runs.
   * If your JavaScript calls `turnstile.render(el)` on a `.cf-turnstile` placeholder it inserted, for example after an Ajax form replacement, call `cfTurnstile.mount(el)` instead.
-* **You set `config.render = 'explicit'` in v1.x and called `turnstile.render(...)` yourself from JavaScript**: set `config.manual_render = true`. The gem loads `api.js` for you and renders nothing, so your existing code keeps working exactly as before.
-  * If you'd rather hand rendering over to the gem, delete your manual `turnstile.render(...)` calls instead and leave the defaults alone.
+* **You set `config.render = 'explicit'` in v1.x and called `turnstile.render(...)` yourself from JavaScript**: the right setting depends on which widgets your code rendered. The v1.x helper rendered every empty `.cf-turnstile` placeholder even in explicit mode, so most apps relied on it for their `cloudflare_turnstile_tag` widgets.
+  * If your code only rendered placeholders the gem had not, for example after an Ajax form replacement, keep the defaults and replace those calls with `cfTurnstile.mount(el)`.
+  * If your code rendered every widget itself, set `config.manual_render = true`. The gem loads `api.js` for you and renders nothing, including widgets from `cloudflare_turnstile_tag`.
   * `config.lazy_mount = false` is *not* the right setting here: it makes the gem render widgets eagerly, which would collide with your own `render()` calls (Turnstile error 300030).
 * **You set `config.render = 'auto'` in v1.x** (rare; `'auto'` is also Cloudflare's default): set `config.lazy_mount = false` to silence the boot-time warning, or switch to `config.render = 'explicit'` to opt into lazy mounting.
 

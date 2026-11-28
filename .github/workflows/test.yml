@@ -61,14 +61,14 @@ jobs:
           path: /tmp/screenshots
           if-no-files-found: ignore
 
-  # Single stable status check that summarises the whole matrix above, so
+  # Single stable status check that summarises the test matrix and the JavaScript tests, so
   # branch protection can require one name ("Test") instead of every cell.
   test-result:
     name: Test
     if: always()
-    needs: test
+    needs: [test, js_test]
     runs-on: ubuntu-latest
     steps:
-      - name: Fail if any matrix job did not succeed
-        if: needs.test.result != 'success'
+      - name: Fail if any test job did not succeed
+        if: needs.test.result != 'success' || needs.js_test.result != 'success'
         run: exit 1

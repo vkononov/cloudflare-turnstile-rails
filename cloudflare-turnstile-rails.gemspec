@@ -19,8 +19,8 @@ Gem::Specification.new do |spec|
 
   spec.post_install_message = <<~MESSAGE
     Upgrading from cloudflare-turnstile-rails v1.x? Since v2.0 the widget
-    renders only when it is needed, and apps that call turnstile.render()
-    themselves must set config.manual_render = true. See the upgrade guide:
+    renders only when it is needed. Apps whose own JavaScript calls
+    turnstile.render() may need changes. See the upgrade guide:
 
       #{spec.homepage}#upgrading-from-v1x-to-v20
   MESSAGE
