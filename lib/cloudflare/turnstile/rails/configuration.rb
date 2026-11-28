@@ -1,4 +1,3 @@
-require 'cgi'
 require 'uri'
 
 module Cloudflare
@@ -115,8 +114,8 @@ module Cloudflare
 
           # Otherwise, append render/onload if present:
           params = []
-          params << "render=#{CGI.escape(@render)}" unless @render.nil?
-          params << "onload=#{CGI.escape(@onload)}" unless @onload.nil?
+          params << "render=#{URI.encode_www_form_component(@render)}" unless @render.nil?
+          params << "onload=#{URI.encode_www_form_component(@onload)}" unless @onload.nil?
 
           params.empty? ? Cloudflare::SCRIPT_URL : "#{Cloudflare::SCRIPT_URL}?#{params.join('&')}"
         end

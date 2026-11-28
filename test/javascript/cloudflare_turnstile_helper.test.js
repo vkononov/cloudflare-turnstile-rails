@@ -758,6 +758,28 @@ describe('Turbo page cache (before-cache teardown)', () => {
     expect(el.style.minHeight).toBe('65px');
   });
 
+  test('does not render again on the page being left when the widget started in a hidden modal', async () => {
+    const modal = doc.createElement('div');
+    modal.style.display = 'none';
+    doc.body.appendChild(modal);
+    const el = placeholder({ 'data-reserve-height': '65' });
+    modal.appendChild(el);
+    bootHelper();
+    const { render } = resolveWithWidget();
+
+    modal.style.display = 'block';
+    await flushMicrotasks();
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledTimes(1);
+
+    fireGesture('turbo:before-cache');
+    await flushMicrotasks();
+    await flushMacrotasks();
+
+    expect(render).toHaveBeenCalledTimes(1);
+  });
+
   test('turbolinks:before-cache gets the same treatment', () => {
     const el = placeholder();
     bootHelper();
