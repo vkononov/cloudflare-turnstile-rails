@@ -186,10 +186,10 @@ window.cfTurnstile.mountAll();
 #### Hidden modals & dialogs
 
 The first-gesture trigger (`pointerdown` / `keydown`) deliberately **skips
-widgets that are inside a `display: none` ancestor** — closed modals,
-hidden tabs, collapsed accordions, etc. Those widgets stay pending until
-the container becomes visible, at which point the IntersectionObserver
-mounts them. This means a random click anywhere on the page won't pre-warm
+widgets that are inside a `display: none` ancestor or a closed
+`<details>`** — closed modals, hidden tabs, collapsed accordions, etc.
+Those widgets stay pending until the container becomes visible, at which
+point the gem mounts them. This means a random click anywhere on the page won't pre-warm
 a widget the user can't see (which would defeat the purpose of lazy
 mounting it).
 

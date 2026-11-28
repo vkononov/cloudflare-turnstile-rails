@@ -1190,6 +1190,36 @@ describe('attribute-driven reveal (native <dialog> and friends)', () => {
     expect(el.dataset.turnstileRendered).toBe('true');
   });
 
+  test('a real <details> holds its widget back until it opens', async () => {
+    // A closed <details> hides its content through its UA shadow tree, so no
+    // light-DOM ancestor of the widget computes to display:none. The summary
+    // stays visible, so a widget inside it is mountable straight away.
+    const details = doc.createElement('details');
+    const summary = doc.createElement('summary');
+    const inSummary = doc.createElement('div');
+    inSummary.className = 'cf-turnstile';
+    summary.appendChild(inSummary);
+    const inBody = doc.createElement('div');
+    inBody.className = 'cf-turnstile';
+    details.appendChild(summary);
+    details.appendChild(inBody);
+    doc.body.appendChild(details);
+
+    bootHelper();
+    fireGesture('pointerdown');
+    let render = resolveApiJs();
+
+    expect(render.mock.calls.map((call) => call[0])).toEqual([inSummary]);
+
+    details.open = true;
+    await flushMicrotasks();
+    await flushMacrotasks();
+    render = win.turnstile.render;
+
+    expect(render).toHaveBeenCalledTimes(2);
+    expect(render.mock.calls[1][0]).toBe(inBody);
+  });
+
   test('a style-driven reveal still works (regression check)', async () => {
     const modal = doc.createElement('div');
     modal.style.display = 'none';
