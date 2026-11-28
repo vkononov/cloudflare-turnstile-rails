@@ -787,6 +787,35 @@ describe('Turbo page cache (before-cache teardown)', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
+  describe.each(['lazy', 'eager'])('%s mode on a Turbo preview', (mountMode) => {
+    test.each(['data-turbo-preview', 'data-turbolinks-preview'])(
+      'renders nothing into a %s page and mounts the fresh page that replaces it',
+      async (previewAttr) => {
+        bootHelper({ mountMode });
+        const { render } = resolveWithWidget();
+
+        doc.documentElement.setAttribute(previewAttr, '');
+        const previewEl = placeholder();
+        fireGesture('turbo:render');
+        await flushMacrotasks();
+        if (ioInstances[0]) ioInstances[0].trigger(previewEl);
+        await flushMacrotasks();
+
+        expect(render).not.toHaveBeenCalled();
+
+        doc.documentElement.removeAttribute(previewAttr);
+        previewEl.remove();
+        const freshEl = placeholder();
+        fireGesture('turbo:render');
+        if (ioInstances[0]) ioInstances[0].trigger(freshEl);
+        await flushMacrotasks();
+
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(render.mock.calls[0][0] === freshEl).toBe(true);
+      }
+    );
+  });
+
   test('passive mode never tears down the host app\'s widgets', () => {
     const el = placeholder();
     bootHelper({ mountMode: 'passive' });
