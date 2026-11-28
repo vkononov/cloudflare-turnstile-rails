@@ -227,8 +227,8 @@ attribute only. The helper applies it as a `min-height` through the CSSOM when
 the widget starts being observed, and releases it once the widget mounts.
 Because CSP's `style-src-attr` governs `style` attributes parsed from HTML and
 not CSSOM writes, this works under a strict policy with no
-`'unsafe-inline'` relaxation. An author-supplied `min-height` is never
-overridden.
+`'unsafe-inline'` relaxation. An author-supplied `min-height`, inline or from a
+stylesheet, is never overridden.
 
 The reservation is skipped when:
 

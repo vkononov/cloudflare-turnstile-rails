@@ -1573,6 +1573,17 @@ describe('space reservation (CLS)', () => {
     expect(el.style.minHeight).toBe('300px');
   });
 
+  test('never overrides a min-height set in a stylesheet', () => {
+    const style = doc.createElement('style');
+    style.textContent = '.cf-turnstile { min-height: 100px; }';
+    doc.head.appendChild(style);
+    const el = placeholder({ 'data-reserve-height': '65' });
+    bootHelper();
+
+    expect(el.style.minHeight).toBe('');
+    expect(win.getComputedStyle(el).minHeight).toBe('100px');
+  });
+
   test('preserves other inline styles when releasing the reservation', () => {
     const el = placeholder({ 'data-reserve-height': '65', style: 'width: 300px' });
     bootHelper();
